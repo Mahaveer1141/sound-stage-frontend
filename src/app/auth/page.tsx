@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Mail } from "lucide-react";
+import { useForm, useWatch, UseFormReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,42 +19,234 @@ import {
   InputOTPGroup,
   InputOTPSlot
 } from "@/components/ui/input-otp";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage
+} from "@/components/ui/form";
 import { useRouter } from "next/navigation";
 import FloatingOrbs from "@/components/floating-orbs";
+import {
+  emailSchema,
+  OtpFormData,
+  otpSchema,
+  type EmailFormData
+} from "@/lib/validations/auth";
+import { authApi } from "@/lib/api/endpoints/auth";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import Loader from "@/components/loader";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
+import { Spinner } from "@/components/ui/spinner";
+import { setTokens } from "@/lib/api/token";
 
 type AuthStep = "email" | "otp";
+
+const EmailForm = ({
+  emailForm,
+  handleSubmit,
+  isLoading
+}: {
+  emailForm: UseFormReturn<EmailFormData>;
+  handleSubmit: (data: EmailFormData) => void;
+  isLoading: boolean;
+}) => {
+  return (
+    <Form {...emailForm}>
+      <motion.form
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onSubmit={emailForm.handleSubmit(handleSubmit)}
+        className="space-y-4"
+      >
+        <FormField
+          control={emailForm.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="pl-10 h-12 bg-surface/50 border-border/50 focus:border-primary"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button
+          type="submit"
+          className="w-full h-12"
+          variant="glow"
+          disabled={isLoading}
+        >
+          {isLoading ? <Spinner /> : "Send OTP"}
+        </Button>
+      </motion.form>
+    </Form>
+  );
+};
+
+const OtpForm = ({
+  otpForm,
+  handleSubmit,
+  handleResendOtp,
+  isLoading,
+  isResendLoading
+}: {
+  otpForm: UseFormReturn<OtpFormData>;
+  handleSubmit: (data: OtpFormData) => void;
+  handleResendOtp: () => void;
+  isLoading: boolean;
+  isResendLoading: boolean;
+}) => {
+  const otpValue = useWatch({ control: otpForm.control, name: "otp" });
+
+  return (
+    <Form {...otpForm}>
+      <motion.form
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onSubmit={otpForm.handleSubmit(handleSubmit)}
+        className="space-y-6"
+      >
+        <FormField
+          control={otpForm.control}
+          name="otp"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="flex justify-center">
+                  <InputOTP
+                    {...field}
+                    maxLength={6}
+                    pattern={REGEXP_ONLY_DIGITS}
+                  >
+                    <InputOTPGroup className="gap-2">
+                      {[0, 1, 2, 3, 4, 5].map((index) => (
+                        <InputOTPSlot
+                          key={index}
+                          index={index}
+                          className="w-12 h-14 text-lg bg-surface/50 border-border/50 rounded-lg"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <Button
+          type="submit"
+          className="w-full h-12"
+          variant="glow"
+          disabled={isLoading || otpValue.length !== 6}
+        >
+          {isLoading ? <Spinner /> : "Verify & Continue"}
+        </Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {isResendLoading ? (
+            "Sending OTP..."
+          ) : (
+            <>
+              {"Didn't receive the code? "}
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={() => {
+                  handleResendOtp();
+                }}
+              >
+                Resend
+              </button>
+            </>
+          )}
+        </p>
+      </motion.form>
+    </Form>
+  );
+};
 
 const Auth = () => {
   const router = useRouter();
   const [step, setStep] = useState<AuthStep>("email");
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResendLoading, setIsResendLoading] = useState(false);
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
+  const { isUserLoading } = useAuthGuard();
+  const emailForm = useForm<EmailFormData>({
+    resolver: zodResolver(emailSchema as any),
+    defaultValues: {
+      email: ""
+    }
+  });
+  const otpForm = useForm<OtpFormData>({
+    resolver: zodResolver(otpSchema as any),
+    defaultValues: {
+      otp: ""
+    }
+  });
 
+  const handleRequestOtp = async (data: EmailFormData) => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    setStep("otp");
+    try {
+      await authApi.requestOtp(data.email);
+      setStep("otp");
+    } catch (error: unknown) {
+      toast.error((error as ApiError).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsResendLoading(true);
+    try {
+      await authApi.requestOtp(emailForm.getValues("email"));
+      toast.success("OTP sent successfully");
+    } catch (error: unknown) {
+      toast.error((error as ApiError).message);
+    } finally {
+      setIsResendLoading(false);
+    }
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.length !== 6) return;
-
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-
-    const isNewUser = true;
-    if (isNewUser) {
-      router.push(`/auth/sign_up?email=${encodeURIComponent(email)}`);
-    } else {
-      router.push("/rooms");
+    try {
+      const response = await authApi.verifyOtp(
+        emailForm.getValues("email"),
+        otpForm.getValues("otp")
+      );
+      const isNewUser = !response.data.accessToken;
+      const email = emailForm.getValues("email");
+      if (isNewUser) {
+        router.push(`/auth/sign_up?email=${encodeURIComponent(email)}`);
+      } else {
+        setTokens(response.data);
+        router.push("/rooms");
+      }
+    } catch (error: unknown) {
+      toast.error((error as ApiError).message);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (isUserLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
@@ -88,103 +282,26 @@ const Auth = () => {
               <CardDescription className="mt-2">
                 {step === "email"
                   ? "Enter your email to continue"
-                  : `We sent a code to ${email}`}
+                  : `We sent a code to ${emailForm.getValues("email")}`}
               </CardDescription>
             </motion.div>
           </CardHeader>
 
           <CardContent>
             {step === "email" ? (
-              <motion.form
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onSubmit={handleSendOtp}
-                className="space-y-4"
-              >
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12 bg-surface/50 border-border/50 focus:border-primary"
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full h-12"
-                  variant="glow"
-                  disabled={isLoading || !email}
-                >
-                  {isLoading ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        ease: "linear"
-                      }}
-                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                    />
-                  ) : (
-                    "Send OTP"
-                  )}
-                </Button>
-              </motion.form>
+              <EmailForm
+                emailForm={emailForm}
+                handleSubmit={handleRequestOtp}
+                isLoading={isLoading}
+              />
             ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-6"
-              >
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup className="gap-2">
-                      {[0, 1, 2, 3, 4, 5].map((index) => (
-                        <InputOTPSlot
-                          key={index}
-                          index={index}
-                          className="w-12 h-14 text-lg bg-surface/50 border-border/50 rounded-lg"
-                        />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-
-                <Button
-                  className="w-full h-12"
-                  variant="glow"
-                  disabled={isLoading || otp.length !== 6}
-                  onClick={handleVerifyOtp}
-                >
-                  {isLoading ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        ease: "linear"
-                      }}
-                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                    />
-                  ) : (
-                    "Verify & Continue"
-                  )}
-                </Button>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  Didn't receive the code?{" "}
-                  <button
-                    type="button"
-                    className="text-primary hover:underline"
-                    onClick={() => {}}
-                  >
-                    Resend
-                  </button>
-                </p>
-              </motion.div>
+              <OtpForm
+                otpForm={otpForm}
+                handleSubmit={handleVerifyOtp}
+                isLoading={isLoading}
+                handleResendOtp={handleResendOtp}
+                isResendLoading={isResendLoading}
+              />
             )}
           </CardContent>
         </Card>
