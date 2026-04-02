@@ -18,7 +18,14 @@ import FloatingOrbs from "@/components/floating-orbs";
 import { useForm } from "react-hook-form";
 import { SignUpFormData, signUpSchema } from "@/lib/validations/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormField } from "@/components/ui/form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage
+} from "@/components/ui/form";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { userApi } from "@/lib/api/endpoints/user";
@@ -135,17 +142,20 @@ const Signup = () => {
                   control={signUpForm.control}
                   name="email"
                   render={({ field }) => (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-sm font-medium text-muted-foreground">
                         Email
-                      </label>
-                      <Input
-                        type="email"
-                        {...field}
-                        disabled
-                        className="h-12 bg-surface/30 border-border/50 text-muted-foreground"
-                      />
-                    </div>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          {...field}
+                          disabled
+                          className="h-12 bg-surface/30 border-border/50 text-muted-foreground"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -153,17 +163,20 @@ const Signup = () => {
                   control={signUpForm.control}
                   name="firstName"
                   render={({ field }) => (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-sm font-medium text-foreground">
                         First Name
-                      </label>
-                      <Input
-                        {...field}
-                        placeholder="Enter your first name"
-                        required
-                        className="h-12 bg-surface/50 border-border/50 focus:border-primary"
-                      />
-                    </div>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Enter your first name"
+                          required
+                          className="h-12 bg-surface/50 border-border/50 focus:border-primary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 
@@ -171,16 +184,19 @@ const Signup = () => {
                   control={signUpForm.control}
                   name="lastName"
                   render={({ field }) => (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
+                    <FormItem className="space-y-2">
+                      <FormLabel className="text-sm font-medium text-foreground">
                         Last Name
-                      </label>
-                      <Input
-                        {...field}
-                        placeholder="Enter your last name"
-                        className="h-12 bg-surface/50 border-border/50 focus:border-primary"
-                      />
-                    </div>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Enter your last name"
+                          className="h-12 bg-surface/50 border-border/50 focus:border-primary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
                 />
 

@@ -222,12 +222,12 @@ const Auth = () => {
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = async (data: OtpFormData) => {
     setIsLoading(true);
     try {
       const response = await authApi.verifyOtp(
         emailForm.getValues("email"),
-        otpForm.getValues("otp")
+        data.otp
       );
       const isNewUser = !response.data.accessToken;
       const email = emailForm.getValues("email");

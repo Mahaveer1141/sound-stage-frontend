@@ -3,9 +3,9 @@ import { TokenPair, UserType, SignUpInput } from "@/lib/api/types";
 
 export const userApi = {
   currentUser: (): Promise<ApiResponse<UserType>> => {
-    return api.get("/user/current");
+    return api.get("/users/current");
   },
   signUp: (input: SignUpInput): Promise<ApiResponse<TokenPair>> => {
-    return api.post("/user/sign_up", input);
+    return api.post("/users/sign_up", input);
   }
 };
