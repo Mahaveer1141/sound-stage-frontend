@@ -1,4 +1,4 @@
-import { clearTokens, refreshAccessToken } from "./token";
+import { clearTokens, getAccessToken, refreshAccessToken } from "./token";
 import { ApiError, ApiResponse, HttpMethod, RequestConfig } from "./types";
 
 class HttpClient {
@@ -99,7 +99,7 @@ class HttpClient {
       ...custom
     });
 
-    headers.set("Authorization", `Bearer ${process.env.NeXT_PUBLIC_API_TOKEN}`);
+    headers.set("Authorization", `Bearer ${getAccessToken()}`);
 
     return headers;
   }

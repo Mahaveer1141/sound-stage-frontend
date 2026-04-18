@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import RoomCard from "@/components/room-card";
 import FloatingOrbs from "@/components/floating-orbs";
 import { Search, Plus, Filter } from "lucide-react";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import Loader from "@/components/loader";
 
 const mockRooms = [
   {
@@ -146,6 +148,8 @@ const Rooms = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
+  const { isUserLoading } = useAuthGuard();
+
   const filteredRooms = mockRooms.filter((room) => {
     const matchesSearch = room.name
       .toLowerCase()
@@ -154,6 +158,10 @@ const Rooms = () => {
       selectedCategory === "All" || room.topic === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  if (isUserLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="relative min-h-screen pt-24 pb-12 px-4">

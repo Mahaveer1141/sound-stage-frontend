@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import Loader from "@/components/loader";
 
 const mockRoom = {
   id: "1",
@@ -114,10 +116,15 @@ const Room = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [isRaisingHand, setIsRaisingHand] = useState(false);
   const [isAdmin] = useState(true);
+  const { isUserLoading } = useAuthGuard();
 
   const handleLeave = () => {
     router.push("/rooms");
   };
+
+  if (isUserLoading) {
+    <Loader />;
+  }
 
   return (
     <div className="relative min-h-screen pt-20 pb-32">

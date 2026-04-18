@@ -1,5 +1,6 @@
 "use client";
 
+import { getAccessToken } from "@/lib/api";
 import { userApi } from "@/lib/api/endpoints/user";
 import { UserType } from "@/lib/api/types";
 import {
@@ -25,10 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = getAccessToken();
     if (token) {
       (async () => {
-        const response = await userApi.me();
+        const response = await userApi.currentUser();
         if (response.data) {
           setUser(response.data);
         }

@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import FloatingOrbs from "@/components/floating-orbs";
 import { Mic, ArrowRight, Sparkles } from "lucide-react";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import Loader from "@/components/loader";
 
 const topics = [
   "Technology",
@@ -28,12 +30,17 @@ const CreateRoom = () => {
   const [roomName, setRoomName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
+  const { isUserLoading } = useAuthGuard();
 
   const handleCreate = () => {
     router.push("/rooms/new");
   };
 
   const isValid = roomName.trim() && selectedTopic;
+
+  if (isUserLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="relative min-h-screen pt-24 pb-12 px-4">

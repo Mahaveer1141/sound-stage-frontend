@@ -31,6 +31,8 @@ import { toast } from "sonner";
 import { userApi } from "@/lib/api/endpoints/user";
 import { setTokens } from "@/lib/api/token";
 import { ApiError } from "@/lib/api";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import Loader from "@/components/loader";
 
 const Signup = () => {
   const router = useRouter();
@@ -40,6 +42,7 @@ const Signup = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { isUserLoading } = useAuthGuard();
 
   const signUpForm = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema as any),
@@ -78,6 +81,10 @@ const Signup = () => {
       setIsLoading(false);
     }
   };
+
+  if (isUserLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
