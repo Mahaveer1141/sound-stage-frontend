@@ -8,5 +8,9 @@ export const authApi = {
 
   verifyOtp: (email: string, otp: string): Promise<ApiResponse<TokenPair>> => {
     return api.post("/auth/verify_otp", { email, otp });
+  },
+
+  logout: (): Promise<ApiResponse> => {
+    return api.post("/auth/logout");
   }
 } as const;

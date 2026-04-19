@@ -1,17 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Mic, LayoutGrid, Plus, LogIn } from "lucide-react";
+import { Mic, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import { User, LogOut } from "lucide-react";
+import { clearTokens } from "@/lib/api";
+import { authApi } from "@/lib/api/endpoints/auth";
+import { toast } from "sonner";
+
+const UserMenu = () => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="glow" size="sm" className="gap-2 ml-2">
+          <User className="w-4 h-4" />
+          Account
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-48">
+        <Link href="/users/update">
+          <DropdownMenuItem className="cursor-pointer">
+            <User className="w-4 h-4 mr-2" />
+            Update Profile
+          </DropdownMenuItem>
+        </Link>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onClick={async () => {
+            try {
+              await authApi.logout();
+            } catch (err) {
+              console.error(err);
+            } finally {
+              clearTokens();
+              toast.success("Logout successful");
+            }
+          }}
+          className="cursor-pointer text-red-500"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 const Navbar = () => {
-  const pathname = usePathname();
-  const [isLoggedIn] = useState(false);
-
-  const navItems = [{ path: "/rooms", label: "Rooms", icon: LayoutGrid }];
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
 
   return (
     <motion.nav
@@ -30,30 +79,7 @@ const Navbar = () => {
 
           <div className="flex items-center gap-2">
             {isLoggedIn ? (
-              <>
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.path;
-                  return (
-                    <Link key={item.path} href={item.path}>
-                      <Button
-                        variant={isActive ? "default" : "ghost"}
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <Icon className="w-4 h-4" />
-                        {item.label}
-                      </Button>
-                    </Link>
-                  );
-                })}
-                <Link href="/rooms/create">
-                  <Button variant="glow" size="sm" className="gap-2 ml-2">
-                    <Plus className="w-4 h-4" />
-                    Create Room
-                  </Button>
-                </Link>
-              </>
+              <UserMenu />
             ) : (
               <Link href="/auth">
                 <Button variant="glow" size="sm" className="gap-2">
