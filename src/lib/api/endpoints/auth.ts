@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { ApiResponse, TokenPair } from "@/lib/api/types";
+import type { ApiResponse, TokenPair, SignUpInput } from "@/lib/api/types";
 
 export const authApi = {
   requestOtp: (email: string): Promise<ApiResponse> => {
@@ -8,6 +8,10 @@ export const authApi = {
 
   verifyOtp: (email: string, otp: string): Promise<ApiResponse<TokenPair>> => {
     return api.post("/auth/verify_otp", { email, otp });
+  },
+
+  signUp: (input: SignUpInput): Promise<ApiResponse<TokenPair>> => {
+    return api.post("/auth/sign_up", input);
   },
 
   logout: (): Promise<ApiResponse> => {

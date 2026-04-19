@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { userApi } from "@/lib/api/endpoints/user";
+import { authApi } from "@/lib/api/endpoints/auth";
 import { setTokens } from "@/lib/api/token";
 import { ApiError } from "@/lib/api";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -68,7 +68,7 @@ const Signup = () => {
   const handleSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
     try {
-      const response = await userApi.signUp({
+      const response = await authApi.signUp({
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName
