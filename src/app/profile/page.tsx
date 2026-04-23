@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { useRouter, useSearchParams } from "next/navigation";
-import FloatingOrbs from "@/components/floating-orbs";
 import {
   Card,
   CardContent,
@@ -11,33 +9,35 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import FloatingOrbs from "@/components/floating-orbs";
 import { SignUpFormData } from "@/lib/validations/auth";
 import { ProfileForm } from "@/components/profile-form";
-import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { authApi } from "@/lib/api/endpoints/auth";
-import { setTokens } from "@/lib/api/token";
+import { userApi } from "@/lib/api/endpoints/user";
 import { ApiError } from "@/lib/api";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
+import { useRouter } from "next/navigation";
 
-const Signup = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+export default function ProfilePage() {
+  const { user, isUserLoading } = useAuthGuard();
   const [isLoading, setIsLoading] = useState(false);
-  const { isUserLoading } = useAuthGuard();
+  const router = useRouter();
+
+  if (isUserLoading || !user) {
+    return <Loader />;
+  }
 
   const handleSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
     try {
-      const response = await authApi.signUp({
-        email: data.email,
+      await userApi.updateProfile({
         firstName: data.firstName,
-        lastName: data.lastName
+        lastName: data.lastName,
+        profilePicture: data.profilePicture,
       });
-      setTokens(response.data);
-      router.push("/rooms");
+      toast.success("Profile updated successfully");
+      window.location.reload();
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
     } finally {
@@ -45,12 +45,8 @@ const Signup = () => {
     }
   };
 
-  if (isUserLoading) {
-    return <Loader />;
-  }
-
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden mt-16">
       <FloatingOrbs />
 
       <motion.div
@@ -62,32 +58,29 @@ const Signup = () => {
         <Card className="glass border-border/50">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold gradient-text">
-              Complete Your Profile
+              Update Profile
             </CardTitle>
             <CardDescription className="mt-2">
-              Tell us a bit about yourself
+              Manage your personal information
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <ProfileForm
-              initialData={{ email }}
+              initialData={{
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                profilePicture: user.profilePicture,
+              }}
               onSubmit={handleSubmit}
               isLoading={isLoading}
-              submitLabel="Create Account"
+              submitLabel="Save Changes"
               isEmailDisabled={true}
             />
           </CardContent>
         </Card>
       </motion.div>
     </div>
-  );
-};
-
-export default function SignupPage() {
-  return (
-    <Suspense>
-      <Signup />
-    </Suspense>
   );
 }

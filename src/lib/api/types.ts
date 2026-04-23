@@ -36,10 +36,12 @@ export interface UserType {
   firstName: string;
   lastName: string;
   fullName: string;
+  profilePicture?: string;
 }
 
 export interface SignUpInput {
   email: string;
   firstName: string;
   lastName?: string;
+  profilePicture?: string;
 }
