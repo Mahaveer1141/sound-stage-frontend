@@ -30,7 +30,7 @@ export function ProfileForm({
   onSubmit,
   isLoading,
   submitLabel = "Save",
-  isEmailDisabled = true,
+  isEmailDisabled = true
 }: ProfileFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(
@@ -43,8 +43,8 @@ export function ProfileForm({
       email: initialData?.email || "",
       firstName: initialData?.firstName || "",
       lastName: initialData?.lastName || "",
-      profilePicture: initialData?.profilePicture || "",
-    },
+      profilePicture: initialData?.profilePicture || ""
+    }
   });
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

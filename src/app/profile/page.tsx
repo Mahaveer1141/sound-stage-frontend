@@ -17,16 +17,10 @@ import { userApi } from "@/lib/api/endpoints/user";
 import { ApiError } from "@/lib/api";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
-import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useAuthGuard();
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-
-  if (isUserLoading || !user) {
-    return <Loader />;
-  }
 
   const handleSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
@@ -34,16 +28,21 @@ export default function ProfilePage() {
       await userApi.updateProfile({
         firstName: data.firstName,
         lastName: data.lastName,
-        profilePicture: data.profilePicture,
+        profilePicture: data.profilePicture
       });
       toast.success("Profile updated successfully");
-      window.location.reload();
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isUserLoading || !user) {
+    return <Loader />;
+  }
+
+  console.log(user);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden mt-16">
@@ -71,7 +70,7 @@ export default function ProfilePage() {
                 email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                profilePicture: user.profilePicture,
+                profilePicture: user.profilePicture
               }}
               onSubmit={handleSubmit}
               isLoading={isLoading}

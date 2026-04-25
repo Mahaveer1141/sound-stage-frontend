@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import FloatingOrbs from "@/components/floating-orbs";
 import {
   Card,
@@ -13,20 +13,19 @@ import {
 } from "@/components/ui/card";
 import { SignUpFormData } from "@/lib/validations/auth";
 import { ProfileForm } from "@/components/profile-form";
-import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/endpoints/auth";
 import { setTokens } from "@/lib/api/token";
 import { ApiError } from "@/lib/api";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
+import useAuthEmailStore from "@/store/useAuthEmailStore";
 
 const Signup = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const { email, clearEmail } = useAuthEmailStore();
   const [isLoading, setIsLoading] = useState(false);
-  const { isUserLoading } = useAuthGuard();
+  const { isUserLoading, refreshUser } = useAuthGuard();
 
   const handleSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
@@ -37,13 +36,19 @@ const Signup = () => {
         lastName: data.lastName
       });
       setTokens(response.data);
-      router.push("/rooms");
+      clearEmail();
+      await refreshUser();
+      router.replace("/rooms");
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!isUserLoading && !email) {
+    router.replace("/auth");
+  }
 
   if (isUserLoading) {
     return <Loader />;
@@ -84,10 +89,4 @@ const Signup = () => {
   );
 };
 
-export default function SignupPage() {
-  return (
-    <Suspense>
-      <Signup />
-    </Suspense>
-  );
-}
+export default Signup;

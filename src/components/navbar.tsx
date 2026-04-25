@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Mic, LogIn } from "lucide-react";
@@ -16,6 +15,7 @@ import { User, LogOut } from "lucide-react";
 import { clearTokens } from "@/lib/api";
 import { authApi } from "@/lib/api/endpoints/auth";
 import { toast } from "sonner";
+import useAuthStore from "@/store/useAuthStore";
 
 const UserMenu = () => {
   return (
@@ -28,10 +28,10 @@ const UserMenu = () => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-48">
-        <Link href="/users/update">
+        <Link href="/profile">
           <DropdownMenuItem className="cursor-pointer">
             <User className="w-4 h-4 mr-2" />
-            Update Profile
+            Profile
           </DropdownMenuItem>
         </Link>
 
@@ -46,6 +46,7 @@ const UserMenu = () => {
             } finally {
               clearTokens();
               toast.success("Logout successful");
+              window.location.href = "/auth";
             }
           }}
           className="cursor-pointer text-red-500"
@@ -59,7 +60,7 @@ const UserMenu = () => {
 };
 
 const Navbar = () => {
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const isLoggedIn = !!user;
 
   return (

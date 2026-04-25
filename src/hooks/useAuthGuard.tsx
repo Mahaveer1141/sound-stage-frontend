@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/context/auth-context";
+import useAuthStore from "@/store/useAuthStore";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,7 +9,7 @@ export const AUTH_ROUTES = ["/auth", "/auth/sign_up"];
 export const DEFAULT_AUTHENTICATED_ROUTE = "/rooms";
 
 export function useAuthGuard() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUser } = useAuthStore();
   const router = useRouter();
   const path = usePathname();
 
@@ -19,12 +19,15 @@ export function useAuthGuard() {
     const isPublic = PUBLIC_ROUTE === path;
     const isAuth = AUTH_ROUTES.includes(path);
 
-    if (!isPublic && !user) {
-      router.push("/auth");
-    } else if (user && isAuth) {
+    if (isAuth && user) {
       router.push(DEFAULT_AUTHENTICATED_ROUTE);
+      return;
+    }
+
+    if (!isPublic && !isAuth && !user) {
+      router.push("/auth");
     }
   }, [user, isLoading, router, path]);
 
-  return { user, isUserLoading: isLoading };
+  return { user, refreshUser, isUserLoading: isLoading };
 }

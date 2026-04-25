@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
 import { setTokens } from "@/lib/api/token";
+import useAuthEmailStore from "@/store/useAuthEmailStore";
 
 type AuthStep = "email" | "otp";
 
@@ -184,7 +185,8 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResendLoading, setIsResendLoading] = useState(false);
 
-  const { isUserLoading } = useAuthGuard();
+  const { setEmail, clearEmail } = useAuthEmailStore();
+  const { isUserLoading, refreshUser } = useAuthGuard();
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema as any),
     defaultValues: {
@@ -202,6 +204,7 @@ const Auth = () => {
     setIsLoading(true);
     try {
       await authApi.requestOtp(data.email);
+      setEmail(data.email);
       setStep("otp");
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
@@ -230,12 +233,13 @@ const Auth = () => {
         data.otp
       );
       const isNewUser = !response.data.accessToken;
-      const email = emailForm.getValues("email");
       if (isNewUser) {
-        router.push(`/auth/sign_up?email=${encodeURIComponent(email)}`);
+        router.push("/auth/sign_up");
       } else {
+        clearEmail();
         setTokens(response.data);
-        router.push("/rooms");
+        await refreshUser();
+        router.replace("/rooms");
       }
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
