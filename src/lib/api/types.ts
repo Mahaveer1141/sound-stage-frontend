@@ -25,6 +25,18 @@ export interface ApiResponse<T = unknown> {
   message: string;
 }
 
+export interface PaginatedApiResponse<T = unknown> {
+  data: T;
+  message: string;
+  pagination: {
+    page: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}
+
+export type Response<T> = ApiResponse<T> | PaginatedApiResponse<T>;
+
 export interface TokenPair {
   accessToken: string;
   refreshToken?: string;
@@ -39,9 +51,20 @@ export interface UserType {
   profilePicture?: string;
 }
 
+export interface RoomType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 export interface SignUpInput {
   email: string;
   firstName: string;
   lastName?: string;
   profilePicture?: string;
+}
+
+export interface RoomInput {
+  name: string;
+  description?: string;
 }
