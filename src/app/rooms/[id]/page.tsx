@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
+import { RoomType } from "@/lib/api/types";
+import { roomApi } from "@/lib/api/endpoints/room";
+import { toast } from "sonner";
 
 const mockRoom = {
   id: "1",
@@ -116,14 +119,36 @@ const Room = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [isRaisingHand, setIsRaisingHand] = useState(false);
   const [isAdmin] = useState(true);
+  const [room, setRoom] = useState<RoomType | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { isUserLoading } = useAuthGuard();
 
   const handleLeave = () => {
     router.push("/rooms");
   };
 
-  if (isUserLoading) {
-    <Loader />;
+  const fetchRoom = async () => {
+    setIsLoading(true);
+    try {
+      const res = await roomApi.show(id as string);
+      setRoom(res.data);
+    } catch (error) {
+      toast.error("Failed to fetch room");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoom();
+  }, []);
+
+  if (isUserLoading || isLoading) {
+    return <Loader />;
+  }
+
+  if (!room) {
+    return "No Room";
   }
 
   return (
@@ -143,14 +168,11 @@ const Room = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                   LIVE
                 </span>
-                <span className="text-muted-foreground text-sm">
-                  {mockRoom.topic}
-                </span>
               </div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">
-                {mockRoom.name}
+                {room.name}
               </h1>
-              <p className="text-muted-foreground">{mockRoom.description}</p>
+              <p className="text-muted-foreground">{room.description}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="glass" size="icon">

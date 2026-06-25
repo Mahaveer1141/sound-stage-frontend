@@ -20,22 +20,18 @@ export class ApiError extends Error {
   }
 }
 
-export interface ApiResponse<T = unknown> {
+export interface ApiBaseResponse<T = unknown> {
   data: T;
   message: string;
 }
 
-export interface PaginatedApiResponse<T = unknown> {
-  data: T;
-  message: string;
+export interface ApiPaginatedResponse<T = unknown> extends ApiBaseResponse<T> {
   pagination: {
     page: number;
     totalCount: number;
     totalPages: number;
   };
 }
-
-export type Response<T> = ApiResponse<T> | PaginatedApiResponse<T>;
 
 export interface TokenPair {
   accessToken: string;

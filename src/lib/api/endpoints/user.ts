@@ -1,15 +1,15 @@
-import { api, ApiResponse } from "@/lib/api";
-import { UserType } from "@/lib/api/types";
+import { api } from "@/lib/api";
+import { ApiBaseResponse, UserType } from "@/lib/api/types";
 
 export const userApi = {
-  currentUser: (): Promise<ApiResponse<UserType>> => {
+  currentUser: (): Promise<ApiBaseResponse<UserType>> => {
     return api.get("/users/current");
   },
   updateProfile: (data: {
     firstName: string;
     lastName?: string;
     profilePicture?: string;
-  }): Promise<ApiResponse<UserType>> => {
+  }): Promise<ApiBaseResponse<UserType>> => {
     return api.put("/users/profile", data);
   }
 };

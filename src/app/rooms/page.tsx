@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -10,129 +10,9 @@ import FloatingOrbs from "@/components/floating-orbs";
 import { Search, Plus, Filter } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
-
-const mockRooms = [
-  {
-    id: "1",
-    name: "Tech Talk: The Future of AI and Machine Learning",
-    topic: "Technology",
-    speakersCount: 3,
-    listenersCount: 847,
-    isLive: true,
-    speakers: [
-      {
-        name: "Alex Chen",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex"
-      },
-      {
-        name: "Sarah Kim",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah"
-      },
-      {
-        name: "Mike Ross",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike"
-      }
-    ]
-  },
-  {
-    id: "2",
-    name: "Startup Stories: Lessons from Failed Ventures",
-    topic: "Business",
-    speakersCount: 2,
-    listenersCount: 324,
-    isLive: true,
-    speakers: [
-      {
-        name: "Emma Wilson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma"
-      },
-      {
-        name: "David Park",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=david"
-      }
-    ]
-  },
-  {
-    id: "3",
-    name: "Music Production Tips & Tricks",
-    topic: "Music",
-    speakersCount: 4,
-    listenersCount: 512,
-    isLive: true,
-    speakers: [
-      {
-        name: "Luna Mars",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=luna"
-      },
-      {
-        name: "Jake Blues",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jake"
-      },
-      {
-        name: "Nina Soul",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=nina"
-      },
-      {
-        name: "Tom Beat",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=tom"
-      }
-    ]
-  },
-  {
-    id: "4",
-    name: "Crypto & Web3: What's Next?",
-    topic: "Crypto",
-    speakersCount: 2,
-    listenersCount: 189,
-    isLive: false,
-    speakers: [
-      {
-        name: "Vitalik V.",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=vitalik"
-      },
-      {
-        name: "Satoshi N.",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=satoshi"
-      }
-    ]
-  },
-  {
-    id: "5",
-    name: "Meditation & Mindfulness Session",
-    topic: "Wellness",
-    speakersCount: 1,
-    listenersCount: 76,
-    isLive: true,
-    speakers: [
-      {
-        name: "Zen Master",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zen"
-      }
-    ]
-  },
-  {
-    id: "6",
-    name: "Game Dev Talk: Building Indie Games",
-    topic: "Gaming",
-    speakersCount: 3,
-    listenersCount: 234,
-    isLive: false,
-    speakers: [
-      {
-        name: "Pixel Pete",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=pixel"
-      },
-      {
-        name: "Sprite Sam",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sprite"
-      },
-      {
-        name: "Code Carl",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=code"
-      }
-    ]
-  }
-];
+import { roomApi } from "@/lib/api/endpoints/room";
+import { toast } from "sonner";
+import { RoomType } from "@/lib/api/types";
 
 const categories = [
   "All",
@@ -147,19 +27,36 @@ const categories = [
 const Rooms = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [rooms, setRooms] = useState<RoomType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { isUserLoading } = useAuthGuard();
 
-  const filteredRooms = mockRooms.filter((room) => {
+  const filteredRooms = rooms.filter((room) => {
     const matchesSearch = room.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "All" || room.topic === selectedCategory;
+    const matchesCategory = selectedCategory === "All";
     return matchesSearch && matchesCategory;
   });
 
-  if (isUserLoading) {
+  const fetchRooms = async () => {
+    setIsLoading(true);
+    try {
+      const res = await roomApi.list();
+      setRooms(res.data);
+    } catch (error) {
+      toast.error("Failed to fetch rooms");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  if (isUserLoading || isLoading) {
     return <Loader />;
   }
 

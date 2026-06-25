@@ -9,6 +9,7 @@ export { ApiError } from "./types";
 export type {
   HttpMethod,
   RequestConfig,
-  ApiResponse,
+  ApiBaseResponse,
+  ApiPaginatedResponse,
   TokenPair
 } from "./types";

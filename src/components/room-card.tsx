@@ -9,17 +9,15 @@ import AudioWave from "./audio-wave";
 interface RoomCardProps {
   id: string;
   name: string;
-  topic: string;
-  speakersCount: number;
-  listenersCount: number;
-  isLive: boolean;
-  speakers: { name: string; avatar: string }[];
+  speakersCount?: number;
+  listenersCount?: number;
+  isLive?: boolean;
+  speakers?: { name: string; avatar: string }[];
 }
 
 const RoomCard = ({
   id,
   name,
-  topic,
   speakersCount,
   listenersCount,
   isLive,
@@ -43,10 +41,6 @@ const RoomCard = ({
                       LIVE
                     </span>
                   )}
-                  <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                    <Radio className="w-3 h-3" />
-                    {topic}
-                  </span>
                 </div>
                 <h3 className="text-lg font-semibold text-foreground group-hover:gradient-text transition-all duration-300 line-clamp-2">
                   {name}
@@ -59,7 +53,7 @@ const RoomCard = ({
 
             <div className="flex items-center gap-3 mb-4">
               <div className="flex -space-x-2">
-                {speakers.slice(0, 3).map((speaker, i) => (
+                {speakers?.slice(0, 3).map((speaker, i) => (
                   <div
                     key={i}
                     className="w-8 h-8 rounded-full border-2 border-card overflow-hidden"
@@ -71,16 +65,16 @@ const RoomCard = ({
                     />
                   </div>
                 ))}
-                {speakers.length > 3 && (
+                {speakers && speakers.length > 3 && (
                   <div className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center">
                     <span className="text-xs text-muted-foreground">
-                      +{speakers.length - 3}
+                      +{speakers?.length - 3}
                     </span>
                   </div>
                 )}
               </div>
               <div className="flex flex-col">
-                {speakers.slice(0, 2).map((speaker, i) => (
+                {speakers?.slice(0, 2).map((speaker, i) => (
                   <span key={i} className="text-xs text-muted-foreground">
                     {speaker.name}
                     {i === 0 && speakers.length > 1 && ","}

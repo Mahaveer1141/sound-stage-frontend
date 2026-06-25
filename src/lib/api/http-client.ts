@@ -1,5 +1,11 @@
 import { clearTokens, getAccessToken, refreshAccessToken } from "./token";
-import { ApiError, ApiResponse, HttpMethod, RequestConfig } from "./types";
+import {
+  ApiBaseResponse,
+  ApiError,
+  ApiPaginatedResponse,
+  HttpMethod,
+  RequestConfig
+} from "./types";
 
 class HttpClient {
   private baseUrl: string;
@@ -8,11 +14,11 @@ class HttpClient {
     this.baseUrl = baseUrl ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
   }
 
-  async request<T>(
+  async request<T, R extends ApiBaseResponse<T> = ApiBaseResponse<T>>(
     path: string,
     method: HttpMethod,
     config: RequestConfig = {}
-  ): Promise<ApiResponse<T>> {
+  ): Promise<R> {
     const url = this.buildUrl(path, config.params);
     const headers = this.buildHeaders(config.headers);
     const options = this.buildFetchOptions(method, headers, config);
@@ -41,39 +47,45 @@ class HttpClient {
       }
     }
 
-    return this.handleResponse(response);
+    return this.handleResponse<T, R>(response);
   }
 
-  get<T>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
-    return this.request(path, "GET", config);
+  get<T, R extends ApiBaseResponse<T> = ApiBaseResponse<T>>(
+    path: string,
+    config?: RequestConfig
+  ): Promise<R> {
+    return this.request<T, R>(path, "GET", config);
   }
 
-  post<T>(
+  post<T, R extends ApiBaseResponse<T> = ApiBaseResponse<T>>(
     path: string,
     body?: unknown,
     config?: RequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.request(path, "POST", { ...config, body });
+  ): Promise<R> {
+    return this.request<T, R>(path, "POST", { ...config, body });
   }
 
-  put<T>(
+  put<T, R extends ApiBaseResponse<T> = ApiBaseResponse<T>>(
     path: string,
     body?: unknown,
     config?: RequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.request(path, "PUT", { ...config, body });
+  ): Promise<R> {
+    return this.request<T, R>(path, "PUT", { ...config, body });
   }
 
-  patch<T>(
+  patch<T, R extends ApiBaseResponse<T> = ApiBaseResponse<T>>(
     path: string,
     body?: unknown,
     config?: RequestConfig
-  ): Promise<ApiResponse<T>> {
-    return this.request(path, "PATCH", { ...config, body });
+  ): Promise<R> {
+    return this.request<T, R>(path, "PATCH", { ...config, body });
   }
 
-  delete<T>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
-    return this.request(path, "DELETE", config);
+  delete<T, R extends ApiBaseResponse<T> = ApiBaseResponse<T>>(
+    path: string,
+    config?: RequestConfig
+  ): Promise<R> {
+    return this.request<T, R>(path, "DELETE", config);
   }
 
   private buildUrl(
@@ -137,7 +149,10 @@ class HttpClient {
     return options;
   }
 
-  private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  private async handleResponse<
+    T,
+    R extends ApiBaseResponse<T> = ApiBaseResponse<T>
+  >(response: Response): Promise<R> {
     const body = await response.json();
     if (!response.ok || !body?.success) {
       throw new ApiError(
@@ -145,7 +160,11 @@ class HttpClient {
         response.status
       );
     }
-    return { data: body.data as T, message: body.message ?? "" };
+    return {
+      data: body.data as T,
+      message: body.message ?? "",
+      ...(body.pagination && { pagination: body.pagination })
+    } as R;
   }
 }
 
