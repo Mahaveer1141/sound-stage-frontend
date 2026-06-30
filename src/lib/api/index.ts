@@ -1,4 +1,5 @@
 export { api, HttpClient } from "./http-client";
+export { ws, WsClient } from "./ws-client";
 export {
   getAccessToken,
   setAccessToken,
@@ -11,5 +12,8 @@ export type {
   RequestConfig,
   ApiBaseResponse,
   ApiPaginatedResponse,
-  TokenPair
+  TokenPair,
+  WsMessageHandler,
+  WsEventHandler,
+  EventType
 } from "./types";

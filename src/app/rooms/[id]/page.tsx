@@ -28,90 +28,7 @@ import Loader from "@/components/loader";
 import { RoomType } from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
-
-const mockRoom = {
-  id: "1",
-  name: "Tech Talk: The Future of AI and Machine Learning",
-  topic: "Technology",
-  description:
-    "Join us for an in-depth discussion about AI, machine learning, and what the future holds.",
-  speakers: [
-    {
-      id: "1",
-      name: "Alex Chen",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-      isSpeaking: true,
-      isMuted: false,
-      isAdmin: true
-    },
-    {
-      id: "2",
-      name: "Sarah Kim",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      isSpeaking: false,
-      isMuted: true,
-      isAdmin: false
-    },
-    {
-      id: "3",
-      name: "Mike Ross",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      isSpeaking: false,
-      isMuted: false,
-      isAdmin: false
-    }
-  ],
-  listeners: [
-    {
-      id: "4",
-      name: "Emma W.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-      isRaisingHand: true
-    },
-    {
-      id: "5",
-      name: "David P.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=david",
-      isRaisingHand: false
-    },
-    {
-      id: "6",
-      name: "Luna M.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=luna",
-      isRaisingHand: false
-    },
-    {
-      id: "7",
-      name: "Jake B.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jake",
-      isRaisingHand: true
-    },
-    {
-      id: "8",
-      name: "Nina S.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=nina",
-      isRaisingHand: false
-    },
-    {
-      id: "9",
-      name: "Tom B.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=tom",
-      isRaisingHand: false
-    },
-    {
-      id: "10",
-      name: "Chris R.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=chris",
-      isRaisingHand: false
-    },
-    {
-      id: "11",
-      name: "Amy L.",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=amy",
-      isRaisingHand: false
-    }
-  ]
-};
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 const Room = () => {
   const { id } = useParams();
@@ -122,6 +39,7 @@ const Room = () => {
   const [room, setRoom] = useState<RoomType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { isUserLoading } = useAuthGuard();
+  const { onConnect, subscribe, send } = useWebSocket(`/ws/rooms/${id}`);
 
   const handleLeave = () => {
     router.push("/rooms");
@@ -141,6 +59,24 @@ const Room = () => {
 
   useEffect(() => {
     fetchRoom();
+  }, [id]);
+
+  useEffect(() => {
+    onConnect(() => {
+      send("join_room", {});
+    });
+
+    subscribe("join_room", () => {
+      fetchRoom();
+    });
+
+    subscribe("leave_room", () => {
+      fetchRoom();
+    });
+
+    return () => {
+      send("leave_room", {});
+    };
   }, []);
 
   if (isUserLoading || isLoading) {
@@ -201,11 +137,11 @@ const Room = () => {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Mic className="w-4 h-4 text-primary" />
-              <span>{mockRoom.speakers.length} speakers</span>
+              <span>1 speakers</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Users className="w-4 h-4" />
-              <span>{mockRoom.listeners.length} listeners</span>
+              <span>{room.users?.length} listeners</span>
             </div>
           </div>
         </motion.div>
@@ -228,17 +164,15 @@ const Room = () => {
 
           <div className="glass rounded-2xl p-6">
             <div className="flex flex-wrap gap-8 justify-center">
-              {mockRoom.speakers.map((speaker) => (
-                <ParticipantAvatar
-                  key={speaker.id}
-                  name={speaker.name}
-                  avatar={speaker.avatar}
-                  isSpeaking={speaker.isSpeaking}
-                  isMuted={speaker.isMuted}
-                  isAdmin={speaker.isAdmin}
-                  size="lg"
-                />
-              ))}
+              <ParticipantAvatar
+                key={room.creator.id}
+                name={room.creator.firstName}
+                avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=alex"
+                isSpeaking={true}
+                isMuted={false}
+                isAdmin={true}
+                size="lg"
+              />
             </div>
           </div>
         </motion.section>
@@ -255,20 +189,19 @@ const Room = () => {
             </h2>
             {isAdmin && (
               <Button variant="glass" size="sm" className="text-xs">
-                View Raised Hands (
-                {mockRoom.listeners.filter((l) => l.isRaisingHand).length})
+                View Raised Hands ({room.users?.filter((_) => false).length})
               </Button>
             )}
           </div>
 
           <div className="glass rounded-2xl p-6">
             <div className="flex flex-wrap gap-6 justify-start">
-              {mockRoom.listeners.map((listener) => (
+              {room.users?.map((listener) => (
                 <ParticipantAvatar
                   key={listener.id}
-                  name={listener.name}
-                  avatar={listener.avatar}
-                  isRaisingHand={listener.isRaisingHand}
+                  name={listener.firstName}
+                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=sarah"
+                  isRaisingHand={false}
                   isMuted
                   size="md"
                 />

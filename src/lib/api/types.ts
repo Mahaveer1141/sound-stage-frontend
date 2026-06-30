@@ -51,6 +51,8 @@ export interface RoomType {
   id: string;
   name: string;
   description?: string;
+  creator: UserType;
+  users?: UserType[];
 }
 
 export interface SignUpInput {
@@ -64,3 +66,7 @@ export interface RoomInput {
   name: string;
   description?: string;
 }
+
+export type WsMessageHandler<T> = (data: T) => void;
+export type WsEventHandler = () => void;
+export type EventType = "join_room" | "leave_room";
