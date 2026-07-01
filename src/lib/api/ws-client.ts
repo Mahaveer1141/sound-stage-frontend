@@ -75,6 +75,13 @@ class WsClient {
 
   onConnect(handler: WsEventHandler): () => void {
     this.eventHandlers.onOpen.add(handler);
+    if (this.isConnected()) {
+      try {
+        handler();
+      } catch (err) {
+        console.error("Error executing late onConnect handler:", err);
+      }
+    }
     return () => this.eventHandlers.onOpen.delete(handler);
   }
 

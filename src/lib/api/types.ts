@@ -69,4 +69,10 @@ export interface RoomInput {
 
 export type WsMessageHandler<T> = (data: T) => void;
 export type WsEventHandler = () => void;
-export type EventType = "join_room" | "leave_room";
+export type EventType =
+  | "join_room"
+  | "leave_room"
+  | "webrtc_offer"
+  | "webrtc_answer"
+  | "webrtc_candidate"
+  | "webrtc_add_track";

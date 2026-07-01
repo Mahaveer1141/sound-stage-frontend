@@ -79,6 +79,88 @@ const Room = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let pc: RTCPeerConnection | null = null;
+    let stopped = false;
+    let stream: MediaStream;
+
+    pc = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: "stun:stun.l.google.com:19302"
+        }
+      ]
+    });
+
+    (async () => {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false
+      });
+
+      stream.getTracks().forEach((track) => {
+        try {
+          pc?.addTrack(track, stream);
+        } catch (e) {
+          console.warn("Failed to add track", e);
+        }
+      });
+
+      onConnect(async () => {
+        if (!pc) return;
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        send("webrtc_offer", pc.localDescription);
+      });
+    })();
+
+    subscribe("webrtc_offer", async (offer: RTCSessionDescriptionInit) => {
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      send("webrtc_answer", answer);
+    });
+
+    subscribe("webrtc_answer", async (answer: RTCSessionDescriptionInit) => {
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    subscribe("webrtc_candidate", async (candidate: RTCIceCandidateInit) => {
+      if (!pc) return;
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        // ignore
+      }
+    });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        send("webrtc_candidate", event.candidate);
+      }
+    };
+
+    pc.ontrack = (event) => {
+      const audioElement = document.createElement("audio");
+      audioElement.srcObject = new MediaStream([event.track]);
+      audioElement.autoplay = true;
+      document.body.appendChild(audioElement);
+    };
+
+    // cleanup on unmount
+    return () => {
+      stopped = true;
+      try {
+        stream.getTracks().forEach((t) => t.stop());
+      } catch (e) {}
+      try {
+        pc?.close();
+      } catch (e) {}
+    };
+  }, []);
+
   if (isUserLoading || isLoading) {
     return <Loader />;
   }
