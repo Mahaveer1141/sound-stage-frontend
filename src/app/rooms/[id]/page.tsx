@@ -79,28 +79,45 @@ const Room = () => {
     };
   }, []);
 
+  function buildIceServers() {
+    const iceServers: RTCIceServer[] = [];
+
+    const stunUrl = process.env.NEXT_PUBLIC_STUN_URL;
+    if (stunUrl) {
+      iceServers.push({ urls: stunUrl });
+    }
+
+    const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
+    const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
+    const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
+
+    if (
+      process.env.NODE_ENV !== "development" &&
+      turnUrl &&
+      turnUsername &&
+      turnCredential
+    ) {
+      iceServers.push({
+        urls: `turn:${turnUrl}:80?transport=tcp`,
+        username: turnUsername,
+        credential: turnCredential
+      });
+      iceServers.push({
+        urls: `turns:${turnUrl}:443?transport=tcp`,
+        username: turnUsername,
+        credential: turnCredential
+      });
+    }
+
+    return iceServers;
+  }
+
   useEffect(() => {
     let pc: RTCPeerConnection | null = null;
     let stopped = false;
     let stream: MediaStream;
 
-    pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: "stun:stun.relay.metered.ca:80"
-        },
-        {
-          urls: "turn:global.relay.metered.ca:80?transport=tcp",
-          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-          credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL
-        },
-        {
-          urls: "turns:global.relay.metered.ca:443?transport=tcp",
-          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-          credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL
-        }
-      ]
-    });
+    pc = new RTCPeerConnection({ iceServers: buildIceServers() });
 
     (async () => {
       stream = await navigator.mediaDevices.getUserMedia({
