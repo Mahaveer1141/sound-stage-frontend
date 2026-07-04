@@ -29,17 +29,25 @@ import { RoomType } from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import RemoteAudio from "@/components/remote-audio";
 
 const Room = () => {
   const { id } = useParams();
   const router = useRouter();
-  const [isMuted, setIsMuted] = useState(true);
   const [isRaisingHand, setIsRaisingHand] = useState(false);
   const [isAdmin] = useState(true);
   const [room, setRoom] = useState<RoomType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { isUserLoading } = useAuthGuard();
-  const { onConnect, subscribe, send } = useWebSocket(`/ws/rooms/${id}`);
+  const { onConnect, subscribe, send, isConnected } = useWebSocket(
+    `/ws/rooms/${id}`
+  );
+  const { isMuted, toggleMute, remoteStream } = useWebRTC({
+    send,
+    subscribe,
+    enabled: isConnected
+  });
 
   const handleLeave = () => {
     router.push("/rooms");
@@ -75,116 +83,8 @@ const Room = () => {
     });
 
     return () => {
+      if (!isConnected) return;
       send("leave_room", {});
-    };
-  }, []);
-
-  function buildIceServers() {
-    const iceServers: RTCIceServer[] = [];
-
-    const stunUrl = process.env.NEXT_PUBLIC_STUN_URL;
-    if (stunUrl) {
-      iceServers.push({ urls: stunUrl });
-    }
-
-    const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
-    const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
-    const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
-
-    if (
-      process.env.NODE_ENV !== "development" &&
-      turnUrl &&
-      turnUsername &&
-      turnCredential
-    ) {
-      iceServers.push({
-        urls: `turn:${turnUrl}:80?transport=tcp`,
-        username: turnUsername,
-        credential: turnCredential
-      });
-      iceServers.push({
-        urls: `turns:${turnUrl}:443?transport=tcp`,
-        username: turnUsername,
-        credential: turnCredential
-      });
-    }
-
-    return iceServers;
-  }
-
-  useEffect(() => {
-    let pc: RTCPeerConnection | null = null;
-    let stopped = false;
-    let stream: MediaStream;
-
-    pc = new RTCPeerConnection({ iceServers: buildIceServers() });
-
-    (async () => {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false
-      });
-
-      stream.getTracks().forEach((track) => {
-        try {
-          pc?.addTrack(track, stream);
-        } catch (e) {
-          console.warn("Failed to add track", e);
-        }
-      });
-
-      onConnect(async () => {
-        if (!pc) return;
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        send("webrtc_offer", pc.localDescription);
-      });
-    })();
-
-    subscribe("webrtc_offer", async (offer: RTCSessionDescriptionInit) => {
-      if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      send("webrtc_answer", answer);
-    });
-
-    subscribe("webrtc_answer", async (answer: RTCSessionDescriptionInit) => {
-      if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    });
-
-    subscribe("webrtc_candidate", async (candidate: RTCIceCandidateInit) => {
-      if (!pc) return;
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        // ignore
-      }
-    });
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        send("webrtc_candidate", event.candidate);
-      }
-    };
-
-    pc.ontrack = (event) => {
-      const audioElement = document.createElement("audio");
-      audioElement.srcObject = new MediaStream([event.track]);
-      audioElement.autoplay = true;
-      document.body.appendChild(audioElement);
-    };
-
-    // cleanup on unmount
-    return () => {
-      stopped = true;
-      try {
-        stream.getTracks().forEach((t) => t.stop());
-      } catch (e) {}
-      try {
-        pc?.close();
-      } catch (e) {}
     };
   }, []);
 
@@ -199,6 +99,7 @@ const Room = () => {
   return (
     <div className="relative min-h-screen pt-20 pb-32">
       <FloatingOrbs />
+      <RemoteAudio stream={remoteStream} />
 
       <div className="container mx-auto px-4 relative">
         <motion.div
@@ -350,7 +251,7 @@ const Room = () => {
               <Button
                 variant={isMuted ? "glass" : "glow"}
                 size="icon"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => toggleMute()}
                 className="w-14 h-14"
               >
                 {isMuted ? (

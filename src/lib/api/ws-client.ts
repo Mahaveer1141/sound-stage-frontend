@@ -21,6 +21,14 @@ class WsClient {
   }
 
   connect(path: string): Promise<void> {
+    if (
+      this.socket &&
+      (this.socket.readyState === WebSocket.CONNECTING ||
+        this.socket.readyState === WebSocket.OPEN)
+    ) {
+      return Promise.resolve();
+    }
+
     return new Promise((resolve, reject) => {
       try {
         const token = getAccessToken();
@@ -98,6 +106,7 @@ class WsClient {
   send<T = any>(eventType: string, data: T): void {
     if (!this.socket || !this.isConnected()) {
       const error = "WebSocket is not connected";
+      console.log(this.socket, this.isConnected(), eventType);
       this.eventHandlers.onError.forEach((handler) => handler(error));
       throw new Error(error);
     }
