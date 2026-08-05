@@ -31,15 +31,19 @@ import { toast } from "sonner";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import RemoteAudio from "@/components/remote-audio";
+import { useRoomUsers } from "@/hooks/useRoomUsers";
 
 const Room = () => {
-  const { id } = useParams();
-  const router = useRouter();
-  const [isRaisingHand, setIsRaisingHand] = useState(false);
-  const [isAdmin] = useState(true);
-  const [room, setRoom] = useState<RoomType | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const { isUserLoading } = useAuthGuard();
+
+  const { id } = useParams();
+
+  const router = useRouter();
+
+  const [isRaisingHand, setIsRaisingHand] = useState(false);
+  const [room, setRoom] = useState<RoomType | null>(null);
+  const [isRoomLoading, setIsRoomLoading] = useState(false);
+
   const { onConnect, subscribe, send, isConnected } = useWebSocket(
     `/ws/rooms/${id}`
   );
@@ -49,19 +53,40 @@ const Room = () => {
     enabled: isConnected
   });
 
+  const {
+    users: speakers,
+    isLoading: isSpeakersLoading,
+    count: speakerCount,
+    refetch: refetchSpeakers
+  } = useRoomUsers({
+    roomId: id as string,
+    roles: ["admin", "speaker", "moderator"],
+    perPage: 12
+  });
+  const {
+    users: listeners,
+    isLoading: isListenersLoading,
+    count: listenerCount,
+    refetch: refetchListeners
+  } = useRoomUsers({
+    roomId: id as string,
+    roles: ["listener"],
+    perPage: 24
+  });
+
   const handleLeave = () => {
     router.push("/rooms");
   };
 
   const fetchRoom = async () => {
-    setIsLoading(true);
+    setIsRoomLoading(true);
     try {
       const res = await roomApi.show(id as string);
       setRoom(res.data);
-    } catch (error) {
+    } catch (_) {
       toast.error("Failed to fetch room");
     } finally {
-      setIsLoading(false);
+      setIsRoomLoading(false);
     }
   };
 
@@ -74,12 +99,18 @@ const Room = () => {
       send("join_room", {});
     });
 
+    subscribe("error", () => {
+      console.log("error");
+    });
+
     subscribe("join_room", () => {
-      fetchRoom();
+      refetchListeners();
+      refetchSpeakers();
     });
 
     subscribe("leave_room", () => {
-      fetchRoom();
+      refetchListeners();
+      refetchSpeakers();
     });
 
     return () => {
@@ -88,7 +119,12 @@ const Room = () => {
     };
   }, []);
 
-  if (isUserLoading || isLoading) {
+  if (
+    isUserLoading ||
+    isRoomLoading ||
+    isSpeakersLoading ||
+    isListenersLoading
+  ) {
     return <Loader />;
   }
 
@@ -147,11 +183,11 @@ const Room = () => {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Mic className="w-4 h-4 text-primary" />
-              <span>1 speakers</span>
+              <span>{speakerCount} Speakers</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Users className="w-4 h-4" />
-              <span>{room.users?.length} listeners</span>
+              <span>{listenerCount} Listeners</span>
             </div>
           </div>
         </motion.div>
@@ -174,15 +210,17 @@ const Room = () => {
 
           <div className="glass rounded-2xl p-6">
             <div className="flex flex-wrap gap-8 justify-center">
-              <ParticipantAvatar
-                key={room.creator.id}
-                name={room.creator.firstName}
-                avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=alex"
-                isSpeaking={true}
-                isMuted={false}
-                isAdmin={true}
-                size="lg"
-              />
+              {speakers.map((speaker) => (
+                <ParticipantAvatar
+                  key={speaker.id}
+                  name={speaker.user.firstName}
+                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=alex"
+                  isSpeaking={true}
+                  isMuted={false}
+                  isAdmin={true}
+                  size="lg"
+                />
+              ))}
             </div>
           </div>
         </motion.section>
@@ -197,19 +235,19 @@ const Room = () => {
               <Users className="w-5 h-5 text-muted-foreground" />
               Listeners
             </h2>
-            {isAdmin && (
+            {/*{currentUser.role == 'admin' && (
               <Button variant="glass" size="sm" className="text-xs">
                 View Raised Hands ({room.users?.filter((_) => false).length})
               </Button>
-            )}
+            )}*/}
           </div>
 
           <div className="glass rounded-2xl p-6">
             <div className="flex flex-wrap gap-6 justify-start">
-              {room.users?.map((listener) => (
+              {listeners?.map((listener) => (
                 <ParticipantAvatar
                   key={listener.id}
-                  name={listener.firstName}
+                  name={listener.user.firstName}
                   avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=sarah"
                   isRaisingHand={false}
                   isMuted

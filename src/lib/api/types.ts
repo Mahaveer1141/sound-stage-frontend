@@ -1,8 +1,11 @@
 export type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
+type QueryValue = string | number | boolean | undefined | null;
+export type QueryParams = Record<string, QueryValue | QueryValue[]>;
+
 export interface RequestConfig {
   headers?: Record<string, string>;
-  params?: Record<string, string | number | boolean | undefined>;
+  params?: QueryParams;
   body?: unknown;
   signal?: AbortSignal;
   cache?: RequestCache;
@@ -28,7 +31,7 @@ export interface ApiBaseResponse<T = unknown> {
 export interface ApiPaginatedResponse<T = unknown> extends ApiBaseResponse<T> {
   pagination: {
     page: number;
-    totalCount: number;
+    totalItems: number;
     totalPages: number;
   };
 }
@@ -55,6 +58,18 @@ export interface RoomType {
   users?: UserType[];
 }
 
+export interface RoleType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface RoomUserType {
+  id: string;
+  user: UserType;
+  role: RoleType;
+}
+
 export interface SignUpInput {
   email: string;
   firstName: string;
@@ -67,6 +82,14 @@ export interface RoomInput {
   description?: string;
 }
 
+export type RoomUserRole = "admin" | "speaker" | "moderator" | "listener";
+
+export interface RoomUsersQuery {
+  roles?: RoomUserRole[];
+  page?: number;
+  perPage?: number;
+}
+
 export type WsMessageHandler<T> = (data: T) => void;
 export type WsEventHandler = () => void;
 export type EventType =
@@ -75,4 +98,5 @@ export type EventType =
   | "webrtc_offer"
   | "webrtc_answer"
   | "webrtc_candidate"
-  | "webrtc_add_track";
+  | "webrtc_add_track"
+  | "error";

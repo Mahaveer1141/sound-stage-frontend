@@ -106,7 +106,6 @@ class WsClient {
   send<T = any>(eventType: string, data: T): void {
     if (!this.socket || !this.isConnected()) {
       const error = "WebSocket is not connected";
-      console.log(this.socket, this.isConnected(), eventType);
       this.eventHandlers.onError.forEach((handler) => handler(error));
       throw new Error(error);
     }
@@ -142,7 +141,6 @@ class WsClient {
         }
       } catch (error) {
         const errorMsg = `Failed to parse WebSocket message: ${error}`;
-        console.log(errorMsg);
         this.eventHandlers.onError.forEach((handler) => handler(errorMsg));
       }
     };

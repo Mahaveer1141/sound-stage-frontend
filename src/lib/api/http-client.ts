@@ -2,9 +2,9 @@ import { clearTokens, getAccessToken, refreshAccessToken } from "./token";
 import {
   ApiBaseResponse,
   ApiError,
-  ApiPaginatedResponse,
   HttpMethod,
-  RequestConfig
+  RequestConfig,
+  QueryParams
 } from "./types";
 
 class HttpClient {
@@ -88,17 +88,10 @@ class HttpClient {
     return this.request<T, R>(path, "DELETE", config);
   }
 
-  private buildUrl(
-    path: string,
-    params?: Record<string, string | number | boolean | undefined>
-  ): string {
+  private buildUrl(path: string, params?: QueryParams): string {
     const url = new URL(path, this.baseUrl);
     if (params) {
-      for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined) {
-          url.searchParams.set(key, String(value));
-        }
-      }
+      url.search = this.toQueryString(params);
     }
 
     return url.toString();
@@ -165,6 +158,25 @@ class HttpClient {
       message: body.message ?? "",
       ...(body.pagination && { pagination: body.pagination })
     } as R;
+  }
+
+  toQueryString(params: QueryParams): string {
+    const search = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) continue;
+
+      if (Array.isArray(value)) {
+        for (const v of value) {
+          if (v === undefined || v === null) continue;
+          search.append(key, String(v));
+        }
+      } else {
+        search.append(key, String(value));
+      }
+    }
+
+    return search.toString();
   }
 }
 

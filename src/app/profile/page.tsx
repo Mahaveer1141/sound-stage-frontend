@@ -42,8 +42,6 @@ export default function ProfilePage() {
     return <Loader />;
   }
 
-  console.log(user);
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden mt-16">
       <FloatingOrbs />

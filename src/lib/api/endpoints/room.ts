@@ -2,8 +2,11 @@ import { api } from "@/lib/api";
 import type {
   ApiBaseResponse,
   ApiPaginatedResponse,
+  QueryParams,
   RoomInput,
-  RoomType
+  RoomType,
+  RoomUserType,
+  RoomUsersQuery
 } from "@/lib/api/types";
 
 export const roomApi = {
@@ -24,5 +27,15 @@ export const roomApi = {
 
   show: (id: string): Promise<ApiBaseResponse<RoomType>> => {
     return api.get(`/rooms/${id}`);
+  },
+
+  usersList: (
+    id: string,
+    query?: RoomUsersQuery
+  ): Promise<ApiPaginatedResponse<RoomUserType[]>> => {
+    return api.get<RoomUserType[], ApiPaginatedResponse<RoomUserType[]>>(
+      `/rooms/${id}/users`,
+      { params: query as QueryParams }
+    );
   }
 } as const;
