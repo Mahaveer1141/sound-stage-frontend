@@ -5,11 +5,17 @@ import { useEffect, useRef, useState } from "react";
 
 interface UseWebRTCArgs {
   send: (event: EventType, payload: unknown) => void;
-  subscribe: <T>(event: EventType, handler: WsMessageHandler<T>) => void;
+  subscribe: <T>(event: EventType, handler: WsMessageHandler<T>) => () => void;
   enabled: boolean;
+  canSpeak: boolean;
 }
 
-export function useWebRTC({ send, subscribe, enabled }: UseWebRTCArgs) {
+export function useWebRTC({
+  send,
+  subscribe,
+  enabled,
+  canSpeak
+}: UseWebRTCArgs) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -19,10 +25,7 @@ export function useWebRTC({ send, subscribe, enabled }: UseWebRTCArgs) {
   useEffect(() => {
     if (!enabled) return;
 
-    let cancelled = false;
-
     const pc = new RTCPeerConnection({ iceServers: buildIceServers() });
-
     pcRef.current = pc;
 
     pc.ontrack = (event) => {
@@ -33,38 +36,64 @@ export function useWebRTC({ send, subscribe, enabled }: UseWebRTCArgs) {
       if (event.candidate) send("webrtc_candidate", event.candidate);
     };
 
-    subscribe<RTCSessionDescriptionInit>("webrtc_offer", async (offer) => {
-      if (!pcRef.current) return;
-
+    pc.onnegotiationneeded = async () => {
       try {
-        await pcRef.current.setRemoteDescription(offer);
-
-        const answer = await pcRef.current.createAnswer();
-        await pcRef.current.setLocalDescription(answer);
-
-        send("webrtc_answer", answer);
-      } catch (error) {
-        console.error("Error handling webrtc_offer:", error);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        send("webrtc_offer", offer);
+      } catch (err) {
+        console.error("Negotiation error:", err);
       }
-    });
+    };
 
-    subscribe<RTCSessionDescriptionInit>("webrtc_answer", async (answer) => {
-      if (!pcRef.current) return;
+    const unsubscribes = [
+      subscribe<RTCSessionDescriptionInit>("webrtc_offer", async (offer) => {
+        try {
+          if (pc.signalingState !== "stable") {
+            await pc.setLocalDescription({ type: "rollback" });
+          }
 
-      try {
-        await pcRef.current.setRemoteDescription(answer);
-      } catch (error) {
-        console.error("Error handling webrtc_answer:", error);
-      }
-    });
+          await pc.setRemoteDescription(offer);
 
-    subscribe<RTCIceCandidateInit>("webrtc_candidate", async (candidate) => {
-      if (!pcRef.current) return;
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
 
-      try {
-        await pcRef.current.addIceCandidate(candidate);
-      } catch {}
-    });
+          send("webrtc_answer", answer);
+        } catch (error) {
+          console.error("Error handling webrtc_offer:", error);
+        }
+      }),
+
+      subscribe<RTCSessionDescriptionInit>("webrtc_answer", async (answer) => {
+        if (pc.signalingState !== "have-local-offer") return;
+
+        try {
+          await pc.setRemoteDescription(answer);
+        } catch (error) {
+          console.error("Error handling webrtc_answer:", error);
+        }
+      }),
+
+      subscribe<RTCIceCandidateInit>("webrtc_candidate", async (candidate) => {
+        try {
+          await pc.addIceCandidate(candidate);
+        } catch {}
+      })
+    ];
+
+    return () => {
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
+      pc.close();
+      pcRef.current = null;
+      setRemoteStream(null);
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    const pc = pcRef.current;
+    if (!pc || !canSpeak) return;
+
+    let cancelled = false;
 
     (async () => {
       try {
@@ -82,20 +111,6 @@ export function useWebRTC({ send, subscribe, enabled }: UseWebRTCArgs) {
         streamRef.current = stream;
         stream.getAudioTracks().forEach((t) => (t.enabled = false));
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        send("webrtc_offer", offer);
-
-        pc.onnegotiationneeded = async () => {
-          try {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            send("webrtc_offer", offer);
-          } catch (err) {
-            console.error("Negotiation error:", err);
-          }
-        };
       } catch (error) {
         console.error("Error accessing media devices:", error);
       }
@@ -105,11 +120,15 @@ export function useWebRTC({ send, subscribe, enabled }: UseWebRTCArgs) {
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-      pc.close();
-      pcRef.current = null;
-      setRemoteStream(null);
+      setIsMuted(true);
+
+      if (pc.signalingState !== "closed") {
+        pc.getSenders().forEach((sender) => {
+          if (sender.track) pc.removeTrack(sender);
+        });
+      }
     };
-  }, [enabled]);
+  }, [canSpeak, enabled]);
 
   const toggleMute = () => {
     const track = streamRef.current?.getAudioTracks()[0];

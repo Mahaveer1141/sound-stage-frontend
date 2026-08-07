@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
-import { RoomType } from "@/lib/api/types";
+import { RoomType, RoomUserRole } from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -34,7 +34,7 @@ import RemoteAudio from "@/components/remote-audio";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
 
 const Room = () => {
-  const { isUserLoading } = useAuthGuard();
+  const { user, isUserLoading } = useAuthGuard();
 
   const { id } = useParams();
 
@@ -47,12 +47,6 @@ const Room = () => {
   const { onConnect, subscribe, send, isConnected } = useWebSocket(
     `/ws/rooms/${id}`
   );
-  const { isMuted, toggleMute, remoteStream } = useWebRTC({
-    send,
-    subscribe,
-    enabled: isConnected
-  });
-
   const {
     users: speakers,
     isLoading: isSpeakersLoading,
@@ -73,6 +67,12 @@ const Room = () => {
     roles: ["listener"],
     perPage: 24
   });
+  const { isMuted, toggleMute, remoteStream } = useWebRTC({
+    send,
+    subscribe,
+    enabled: isConnected,
+    canSpeak: speakers.some((speaker) => speaker.user.id === user?.id)
+  });
 
   const handleLeave = () => {
     router.push("/rooms");
@@ -87,6 +87,14 @@ const Room = () => {
       toast.error("Failed to fetch room");
     } finally {
       setIsRoomLoading(false);
+    }
+  };
+
+  const updateUserRole = async (userId: string, role: RoomUserRole) => {
+    try {
+      await roomApi.updateUserRole(id as string, userId, role);
+    } catch (_) {
+      toast.error("Failed to update user role");
     }
   };
 
@@ -112,6 +120,15 @@ const Room = () => {
       refetchListeners();
       refetchSpeakers();
     });
+
+    subscribe<{ userId: string; role: RoomUserRole }>(
+      "user_role_updated",
+      ({ userId, role }) => {
+        refetchListeners();
+        refetchSpeakers();
+        console.log(userId, role);
+      }
+    );
 
     return () => {
       if (!isConnected) return;
@@ -236,10 +253,10 @@ const Room = () => {
               Listeners
             </h2>
             {/*{currentUser.role == 'admin' && (
-              <Button variant="glass" size="sm" className="text-xs">
-                View Raised Hands ({room.users?.filter((_) => false).length})
-              </Button>
-            )}*/}
+            <Button variant="glass" size="sm" className="text-xs">
+              View Raised Hands ({room.users?.filter((_) => false).length})
+            </Button>
+          )}*/}
           </div>
 
           <div className="glass rounded-2xl p-6">
@@ -252,6 +269,9 @@ const Room = () => {
                   isRaisingHand={false}
                   isMuted
                   size="md"
+                  onMakeSpeaker={() =>
+                    updateUserRole(String(listener.user.id), "speaker")
+                  }
                 />
               ))}
             </div>

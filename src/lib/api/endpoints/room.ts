@@ -6,7 +6,8 @@ import type {
   RoomInput,
   RoomType,
   RoomUserType,
-  RoomUsersQuery
+  RoomUsersQuery,
+  RoomUserRole
 } from "@/lib/api/types";
 
 export const roomApi = {
@@ -37,5 +38,13 @@ export const roomApi = {
       `/rooms/${id}/users`,
       { params: query as QueryParams }
     );
+  },
+
+  updateUserRole: (
+    roomId: string,
+    userId: string,
+    role: RoomUserRole
+  ): Promise<ApiBaseResponse<RoomUserType>> => {
+    return api.put(`/rooms/${roomId}/users/${userId}/role`, { role });
   }
 } as const;
