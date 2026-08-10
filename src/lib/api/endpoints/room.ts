@@ -40,6 +40,10 @@ export const roomApi = {
     );
   },
 
+  currentRoomUser: (roomId: string): Promise<ApiBaseResponse<RoomUserType>> => {
+    return api.get(`/rooms/${roomId}/users/current`);
+  },
+
   updateUserRole: (
     roomId: string,
     userId: string,

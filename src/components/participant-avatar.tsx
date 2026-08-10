@@ -8,38 +8,54 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { RoomUserRole, RoomUserType } from "@/lib/api/types";
+
+interface RoleAction {
+  label: string;
+  role: RoomUserRole;
+  haveRole: (user: RoomUserType) => boolean;
+}
+
+const ROLE_ACTIONS: RoleAction[] = [
+  {
+    label: "Invite to Speak",
+    role: "speaker",
+    haveRole: (user: RoomUserType) => user.canManage
+  },
+  {
+    label: "Make Host",
+    role: "admin",
+    haveRole: (user: RoomUserType) => user.isAdmin
+  },
+  {
+    label: "Make Moderator",
+    role: "moderator",
+    haveRole: (user: RoomUserType) => user.isAdmin
+  },
+  {
+    label: "Move to Listeners",
+    role: "listener",
+    haveRole: (user: RoomUserType) => user.canManage
+  }
+];
 
 interface ParticipantAvatarProps {
-  name: string;
-  avatar: string;
-  isSpeaking?: boolean;
-  isMuted?: boolean;
-  isAdmin?: boolean;
-  isRaisingHand?: boolean;
   size?: "sm" | "md" | "lg";
-  onClick?: () => void;
-  isSpeaker?: boolean;
-  canManage?: boolean;
-  onMakeSpeaker?: () => void;
-  onMakeListener?: () => void;
-  onMakeAdmin?: () => void;
+  roomUser: RoomUserType;
+  currentRoomUser: RoomUserType | null;
+  isMuted?: boolean;
+  onRoleUpdate: (role: RoomUserRole) => Promise<void>;
+  isRaisingHand?: boolean;
   onMuteToggle?: () => void;
 }
 
 const ParticipantAvatar = ({
-  name,
-  avatar,
-  isSpeaking = false,
-  isMuted = false,
-  isAdmin = false,
-  isRaisingHand = false,
   size = "md",
-  onClick,
-  isSpeaker = false,
-  canManage = true,
-  onMakeSpeaker,
-  onMakeListener,
-  onMakeAdmin,
+  roomUser,
+  currentRoomUser,
+  onRoleUpdate,
+  isMuted = true,
+  isRaisingHand = false,
   onMuteToggle
 }: ParticipantAvatarProps) => {
   const sizeClasses = {
@@ -53,9 +69,24 @@ const ParticipantAvatar = ({
     lg: "w-5 h-5"
   };
 
+  const avatar =
+    roomUser.user.profilePicture ||
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=alex";
+  const isSpeaking = !isMuted;
+
+  const canManageUser = () => {
+    if (currentRoomUser?.id === roomUser.id) return false;
+    if (currentRoomUser?.isAdmin) return true;
+    if (currentRoomUser?.canManage)
+      return (
+        roomUser.role.name === "speaker" || roomUser.role.name === "listener"
+      );
+    return false;
+  };
+
   const avatarCircle = (
     <div className="relative">
-      {isSpeaking && !isMuted && (
+      {isSpeaking && (
         <>
           <motion.div
             className="absolute inset-0 rounded-full border-2 border-primary"
@@ -79,14 +110,18 @@ const ParticipantAvatar = ({
         className={cn(
           "rounded-full overflow-hidden border-2 transition-all duration-300 relative",
           sizeClasses[size],
-          isSpeaking && !isMuted
+          isSpeaking
             ? "border-primary glow-sm"
             : "border-border group-hover:border-primary/50"
         )}
       >
-        <img src={avatar} alt={name} className="w-full h-full object-cover" />
+        <img
+          src={avatar}
+          alt={roomUser.user.fullName}
+          className="w-full h-full object-cover"
+        />
 
-        {canManage && (
+        {canManageUser() && (
           <div
             className={cn(
               "absolute inset-0 flex items-center justify-center rounded-full",
@@ -99,7 +134,7 @@ const ParticipantAvatar = ({
         )}
       </div>
 
-      {isAdmin && (
+      {roomUser?.isAdmin && (
         <div className="absolute -top-1 -right-1 p-1 rounded-full bg-linear-to-r from-primary to-secondary">
           <Crown className={cn("text-primary-foreground", iconSize[size])} />
         </div>
@@ -138,7 +173,7 @@ const ParticipantAvatar = ({
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
     >
-      {canManage ? (
+      {canManageUser() ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="outline-none rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
@@ -146,20 +181,22 @@ const ParticipantAvatar = ({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center">
-            {isSpeaker ? (
-              <DropdownMenuItem onClick={onMakeListener}>
-                Move to listeners
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={onMakeSpeaker}>
-                Invite to speak
-              </DropdownMenuItem>
-            )}
-            {!isAdmin && (
-              <DropdownMenuItem onClick={onMakeAdmin}>
-                Make host
-              </DropdownMenuItem>
-            )}
+            {ROLE_ACTIONS.map((action) => {
+              if (
+                action.haveRole(currentRoomUser!) &&
+                action.role !== roomUser.role.name
+              ) {
+                return (
+                  <DropdownMenuItem
+                    key={action.label}
+                    onClick={() => onRoleUpdate(action.role)}
+                  >
+                    {action.label}
+                  </DropdownMenuItem>
+                );
+              }
+              return null;
+            })}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onMuteToggle}>
               {isMuted ? "Unmute" : "Mute"}
@@ -167,11 +204,11 @@ const ParticipantAvatar = ({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <div onClick={onClick}>{avatarCircle}</div>
+        <div>{avatarCircle}</div>
       )}
 
       <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors text-center max-w-20 truncate">
-        {name}
+        {roomUser.user.firstName}
       </span>
     </motion.div>
   );

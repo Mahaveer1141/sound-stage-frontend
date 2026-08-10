@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
-import { RoomType, RoomUserRole } from "@/lib/api/types";
+import { RoomType, RoomUserRole, RoomUserType } from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -34,7 +34,7 @@ import RemoteAudio from "@/components/remote-audio";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
 
 const Room = () => {
-  const { user, isUserLoading } = useAuthGuard();
+  const { isUserLoading } = useAuthGuard();
 
   const { id } = useParams();
 
@@ -43,10 +43,16 @@ const Room = () => {
   const [isRaisingHand, setIsRaisingHand] = useState(false);
   const [room, setRoom] = useState<RoomType | null>(null);
   const [isRoomLoading, setIsRoomLoading] = useState(false);
+  const [currentRoomUser, setCurrentRoomUser] = useState<RoomUserType | null>(
+    null
+  );
+  const [isCurrentRoomUserLoading, setIsCurrentRoomUserLoading] =
+    useState(false);
 
   const { onConnect, subscribe, send, isConnected } = useWebSocket(
     `/ws/rooms/${id}`
   );
+
   const {
     users: speakers,
     isLoading: isSpeakersLoading,
@@ -71,7 +77,7 @@ const Room = () => {
     send,
     subscribe,
     enabled: isConnected,
-    canSpeak: speakers.some((speaker) => speaker.user.id === user?.id)
+    canSpeak: currentRoomUser?.canSpeak
   });
 
   const handleLeave = () => {
@@ -90,6 +96,18 @@ const Room = () => {
     }
   };
 
+  const fetchCurrentRoomUser = async () => {
+    setIsCurrentRoomUserLoading(true);
+    try {
+      const res = await roomApi.currentRoomUser(id as string);
+      setCurrentRoomUser(res.data);
+    } catch (_) {
+      toast.error("Failed to fetch room");
+    } finally {
+      setIsCurrentRoomUserLoading(false);
+    }
+  };
+
   const updateUserRole = async (userId: string, role: RoomUserRole) => {
     try {
       await roomApi.updateUserRole(id as string, userId, role);
@@ -100,6 +118,7 @@ const Room = () => {
 
   useEffect(() => {
     fetchRoom();
+    fetchCurrentRoomUser();
   }, [id]);
 
   useEffect(() => {
@@ -123,10 +142,10 @@ const Room = () => {
 
     subscribe<{ userId: string; role: RoomUserRole }>(
       "user_role_updated",
-      ({ userId, role }) => {
+      (_) => {
         refetchListeners();
         refetchSpeakers();
-        console.log(userId, role);
+        fetchCurrentRoomUser();
       }
     );
 
@@ -140,7 +159,8 @@ const Room = () => {
     isUserLoading ||
     isRoomLoading ||
     isSpeakersLoading ||
-    isListenersLoading
+    isListenersLoading ||
+    isCurrentRoomUserLoading
   ) {
     return <Loader />;
   }
@@ -188,10 +208,6 @@ const Room = () => {
                     <Settings className="w-4 h-4 mr-2" />
                     Room Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Leave Room
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -230,11 +246,12 @@ const Room = () => {
               {speakers.map((speaker) => (
                 <ParticipantAvatar
                   key={speaker.id}
-                  name={speaker.user.firstName}
-                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=alex"
-                  isSpeaking={true}
+                  currentRoomUser={currentRoomUser}
+                  onRoleUpdate={(role: RoomUserRole) =>
+                    updateUserRole(speaker.user.id, role)
+                  }
+                  roomUser={speaker}
                   isMuted={false}
-                  isAdmin={true}
                   size="lg"
                 />
               ))}
@@ -252,11 +269,11 @@ const Room = () => {
               <Users className="w-5 h-5 text-muted-foreground" />
               Listeners
             </h2>
-            {/*{currentUser.role == 'admin' && (
-            <Button variant="glass" size="sm" className="text-xs">
-              View Raised Hands ({room.users?.filter((_) => false).length})
-            </Button>
-          )}*/}
+            {currentRoomUser?.isAdmin && (
+              <Button variant="glass" size="sm" className="text-xs">
+                View Raised Hands ({room.users?.filter((_) => false).length})
+              </Button>
+            )}
           </div>
 
           <div className="glass rounded-2xl p-6">
@@ -264,14 +281,13 @@ const Room = () => {
               {listeners?.map((listener) => (
                 <ParticipantAvatar
                   key={listener.id}
-                  name={listener.user.firstName}
-                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=sarah"
-                  isRaisingHand={false}
-                  isMuted
-                  size="md"
-                  onMakeSpeaker={() =>
-                    updateUserRole(String(listener.user.id), "speaker")
+                  currentRoomUser={currentRoomUser}
+                  onRoleUpdate={(role: RoomUserRole) =>
+                    updateUserRole(listener.user.id, role)
                   }
+                  roomUser={listener}
+                  isMuted={false}
+                  size="lg"
                 />
               ))}
             </div>

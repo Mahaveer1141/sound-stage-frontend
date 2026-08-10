@@ -31,7 +31,7 @@ export interface ApiBaseResponse<T = unknown> {
 export interface ApiPaginatedResponse<T = unknown> extends ApiBaseResponse<T> {
   pagination: {
     page: number;
-    totalItems: number;
+    totalCount: number;
     totalPages: number;
   };
 }
@@ -42,7 +42,7 @@ export interface TokenPair {
 }
 
 export interface UserType {
-  id: number;
+  id: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -68,6 +68,9 @@ export interface RoomUserType {
   id: string;
   user: UserType;
   role: RoleType;
+  isAdmin: boolean;
+  canManage: boolean;
+  canSpeak: boolean;
 }
 
 export interface SignUpInput {

@@ -7,14 +7,14 @@ interface UseWebRTCArgs {
   send: (event: EventType, payload: unknown) => void;
   subscribe: <T>(event: EventType, handler: WsMessageHandler<T>) => () => void;
   enabled: boolean;
-  canSpeak: boolean;
+  canSpeak: boolean | undefined;
 }
 
 export function useWebRTC({
   send,
   subscribe,
   enabled,
-  canSpeak
+  canSpeak = false
 }: UseWebRTCArgs) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
