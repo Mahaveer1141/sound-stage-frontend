@@ -1,4 +1,4 @@
-import { getAccessToken, refreshAccessToken, clearTokens } from "./token";
+import { getAccessToken } from "./token";
 import { EventType, WsMessageHandler, WsEventHandler } from "./types";
 
 class WsClient {
@@ -66,7 +66,7 @@ class WsClient {
     });
   }
 
-  on<T = any>(eventType: EventType, handler: WsMessageHandler<T>): () => void {
+  on<T>(eventType: EventType, handler: WsMessageHandler<T>): () => void {
     if (!this.messageHandlers.has(eventType)) {
       this.messageHandlers.set(eventType, new Set());
     }
@@ -103,7 +103,7 @@ class WsClient {
     return () => this.eventHandlers.onError.delete(handler);
   }
 
-  send<T = any>(eventType: string, data: T): void {
+  send<T>(eventType: string, data: T): void {
     if (!this.socket || !this.isConnected()) {
       const error = "WebSocket is not connected";
       this.eventHandlers.onError.forEach((handler) => handler(error));

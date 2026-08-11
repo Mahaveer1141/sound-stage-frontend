@@ -60,7 +60,7 @@ const Room = () => {
     refetch: refetchSpeakers
   } = useRoomUsers({
     roomId: id as string,
-    roles: ["admin", "speaker", "moderator"],
+    roles: ["admin", "speaker", "moderator", "owner"],
     perPage: 12
   });
   const {
@@ -101,8 +101,8 @@ const Room = () => {
     try {
       const res = await roomApi.currentRoomUser(id as string);
       setCurrentRoomUser(res.data);
-    } catch (_) {
-      toast.error("Failed to fetch room");
+    } catch (err) {
+      console.log(err);
     } finally {
       setIsCurrentRoomUserLoading(false);
     }
@@ -127,7 +127,7 @@ const Room = () => {
     });
 
     subscribe("error", () => {
-      console.log("error");
+      console.error("error");
     });
 
     subscribe("join_room", () => {

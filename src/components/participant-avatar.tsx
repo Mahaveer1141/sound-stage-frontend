@@ -76,11 +76,16 @@ const ParticipantAvatar = ({
 
   const canManageUser = () => {
     if (currentRoomUser?.id === roomUser.id) return false;
-    if (currentRoomUser?.isAdmin) return true;
+
+    if (currentRoomUser?.isOwner) return true;
+
+    if (currentRoomUser?.isAdmin) return !roomUser.isOwner;
+
     if (currentRoomUser?.canManage)
       return (
         roomUser.role.name === "speaker" || roomUser.role.name === "listener"
       );
+
     return false;
   };
 
@@ -134,7 +139,7 @@ const ParticipantAvatar = ({
         )}
       </div>
 
-      {roomUser?.isAdmin && (
+      {roomUser?.isOwner && (
         <div className="absolute -top-1 -right-1 p-1 rounded-full bg-linear-to-r from-primary to-secondary">
           <Crown className={cn("text-primary-foreground", iconSize[size])} />
         </div>

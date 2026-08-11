@@ -71,6 +71,7 @@ export interface RoomUserType {
   isAdmin: boolean;
   canManage: boolean;
   canSpeak: boolean;
+  isOwner: boolean;
 }
 
 export interface SignUpInput {
@@ -85,7 +86,8 @@ export interface RoomInput {
   description?: string;
 }
 
-export type RoomUserRole = "admin" | "speaker" | "moderator" | "listener";
+export type RoomUserRole =
+  "owner" | "admin" | "speaker" | "moderator" | "listener";
 
 export interface RoomUsersQuery {
   roles?: RoomUserRole[];
