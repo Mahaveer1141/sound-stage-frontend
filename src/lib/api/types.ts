@@ -97,6 +97,10 @@ export interface RoomUsersQuery {
 
 export type WsMessageHandler<T> = (data: T) => void;
 export type WsEventHandler = () => void;
+export type WsErrorPayloadType = {
+  message: string;
+  code: number;
+};
 export type EventType =
   | "join_room"
   | "leave_room"

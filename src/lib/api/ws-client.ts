@@ -1,4 +1,4 @@
-import { getAccessToken } from "./token";
+import { getAccessToken, refreshAccessToken } from "./token";
 import { EventType, WsMessageHandler, WsEventHandler } from "./types";
 
 class WsClient {
@@ -20,7 +20,7 @@ class WsClient {
     this.baseUrl = baseUrl ?? process.env.NEXT_PUBLIC_WS_BASE_URL ?? "";
   }
 
-  connect(path: string): Promise<void> {
+  connect(path: string, isRetry = false): Promise<void> {
     if (
       this.socket &&
       (this.socket.readyState === WebSocket.CONNECTING ||
@@ -49,9 +49,23 @@ class WsClient {
           resolve();
         };
 
-        const handleConnectionFailure = (event: Event) => {
+        const handleConnectionFailure = async (_: Event) => {
           this.socket?.removeEventListener("open", handleConnectionSuccess);
           this.socket?.removeEventListener("error", handleConnectionFailure);
+
+          if (!isRetry) {
+            try {
+              const newToken = await refreshAccessToken();
+              if (newToken) {
+                return this.connect(path, true).then(resolve).catch(reject);
+              }
+            } catch (refreshErr) {
+              console.error(
+                "Token refresh failed during WS connection:",
+                refreshErr
+              );
+            }
+          }
 
           const errorMsg = "Failed to connect to WebSocket";
           this.eventHandlers.onError.forEach((handler) => handler(errorMsg));

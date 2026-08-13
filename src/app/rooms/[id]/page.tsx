@@ -25,7 +25,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
-import { RoomType, RoomUserRole, RoomUserType } from "@/lib/api/types";
+import {
+  RoomType,
+  RoomUserRole,
+  RoomUserType,
+  WsErrorPayloadType
+} from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -126,8 +131,8 @@ const Room = () => {
       send("join_room", {});
     });
 
-    subscribe("error", () => {
-      console.error("error");
+    subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
+      console.error("Ws Error: ", ws_error);
     });
 
     subscribe("join_room", () => {
