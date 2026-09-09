@@ -55,6 +55,17 @@ export interface FileAttachmentType {
   url: string;
 }
 
+export interface CategoryType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface TagType {
+  id: string;
+  name: string;
+}
+
 export interface RoomType {
   id: string;
   name: string;
@@ -100,10 +111,23 @@ export type RoomUserRole =
   | "moderator"
   | "listener";
 
-export interface RoomUsersQuery {
-  roles?: RoomUserRole[];
+interface Pagination {
   page?: number;
   perPage?: number;
+}
+
+export interface RoomQuery extends Pagination, QueryParams {
+  query?: string;
+  categoryIds?: string[];
+  tagIds?: string[];
+}
+
+export interface RoomUsersQuery extends Pagination, QueryParams {
+  roles?: RoomUserRole[];
+}
+
+export interface TagQuery extends Pagination, QueryParams {
+  query?: string;
 }
 
 export type WsMessageHandler<T> = (data: T) => void;

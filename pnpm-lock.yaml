@@ -44,6 +44,9 @@ importers:
       react-hook-form:
         specifier: ^7.71.2
         version: 7.71.2(react@19.2.3)
+      react-virtuoso:
+        specifier: 4.18.11
+        version: 4.18.11(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -3253,6 +3256,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-virtuoso@4.18.11:
+    resolution: {integrity: sha512-Qeeq9vqa5seCxACvzbQTUeq3s2/Bu+VlwOMF0jfy3E/ZKHLiXWwJpXBhv2rckqYkvm1XRVFLCBMCmqCU8JNEJg==}
+    peerDependencies:
+      react: '>=16 || >=17 || >= 18 || >= 19'
+      react-dom: '>=16 || >=17 || >= 18 || >=19'
 
   react@19.2.3:
     resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
@@ -7170,6 +7179,11 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.2.14
+
+  react-virtuoso@4.18.11(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   react@19.2.3: {}
 

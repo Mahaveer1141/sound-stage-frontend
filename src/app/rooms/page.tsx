@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -11,42 +11,15 @@ import { Search, Plus, Filter } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
 import { roomApi } from "@/lib/api/endpoints/room";
-import { toast } from "sonner";
-import { RoomType } from "@/lib/api/types";
+import { RoomType, RoomQuery } from "@/lib/api/types";
+import { InfiniteScroll } from "@/components/infinite-scroll";
 
 const Rooms = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [rooms, setRooms] = useState<RoomType[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   const { isUserLoading } = useAuthGuard();
 
-  const filteredRooms = rooms.filter((room) => {
-    const matchesSearch = room.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All";
-    return matchesSearch && matchesCategory;
-  });
-
-  const fetchRooms = async () => {
-    setIsLoading(true);
-    try {
-      const res = await roomApi.list();
-      setRooms(res.data);
-    } catch (error) {
-      toast.error("Failed to fetch rooms");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRooms();
-  }, []);
-
-  if (isUserLoading || isLoading) {
+  if (isUserLoading) {
     return <Loader />;
   }
 
@@ -77,7 +50,7 @@ const Rooms = () => {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground z-10 pointer-events-none" />
               <Input
                 placeholder="Search rooms..."
                 value={searchQuery}
@@ -92,38 +65,27 @@ const Rooms = () => {
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filteredRooms.map((room, index) => (
-            <motion.div
-              key={room.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * index }}
-            >
-              <RoomCard {...room} />
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {filteredRooms.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
+        <div>
+          <InfiniteScroll<RoomType>
+            fetcher={(page, perPage, params) =>
+              roomApi.list({ ...params, page, perPage } as unknown as RoomQuery)
+            }
+            params={{ search: searchQuery }}
+            perPage={10}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            <p className="text-muted-foreground text-lg mb-4">
-              No rooms found matching your criteria
-            </p>
-            <Link href="/rooms/create">
-              <Button variant="glow">Create a Room</Button>
-            </Link>
-          </motion.div>
-        )}
+            {(room) => (
+              <motion.div
+                key={room.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <RoomCard {...room} />
+              </motion.div>
+            )}
+          </InfiniteScroll>
+        </div>
       </div>
     </div>
   );

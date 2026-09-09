@@ -6,6 +6,7 @@ import type {
   RoomInput,
   RoomType,
   RoomUserType,
+  RoomQuery,
   RoomUsersQuery,
   RoomUserRole
 } from "@/lib/api/types";
@@ -22,8 +23,10 @@ export const roomApi = {
     return api.put(`/rooms/${id}`, input);
   },
 
-  list: (): Promise<ApiPaginatedResponse<RoomType[]>> => {
-    return api.get<RoomType[], ApiPaginatedResponse<RoomType[]>>(`/rooms`);
+  list: (query?: RoomQuery): Promise<ApiPaginatedResponse<RoomType[]>> => {
+    return api.get<RoomType[], ApiPaginatedResponse<RoomType[]>>(`/rooms`, {
+      params: query
+    });
   },
 
   show: (id: string): Promise<ApiBaseResponse<RoomType>> => {
@@ -36,7 +39,7 @@ export const roomApi = {
   ): Promise<ApiPaginatedResponse<RoomUserType[]>> => {
     return api.get<RoomUserType[], ApiPaginatedResponse<RoomUserType[]>>(
       `/rooms/${id}/users`,
-      { params: query as QueryParams }
+      { params: query }
     );
   },
 
