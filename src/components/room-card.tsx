@@ -2,27 +2,37 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Mic, Radio } from "lucide-react";
+import { Users, Radio } from "lucide-react";
 import { motion } from "framer-motion";
 import AudioWave from "./audio-wave";
+import type { FileAttachmentType } from "@/lib/api/types";
 
 interface RoomCardProps {
   id: string;
   name: string;
-  speakersCount?: number;
-  listenersCount?: number;
-  isLive?: boolean;
-  speakers?: { name: string; avatar: string }[];
+  totalUsers?: number;
+  liveUsers?: number;
+  coverImage?: FileAttachmentType;
+  logoImage?: FileAttachmentType;
 }
 
 const RoomCard = ({
   id,
   name,
-  speakersCount,
-  listenersCount,
-  isLive,
-  speakers
+  totalUsers,
+  liveUsers,
+  coverImage,
+  logoImage
 }: RoomCardProps) => {
+  const isLive = (liveUsers ?? 0) > 0;
+
+  const coverUrl =
+    coverImage?.url ||
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
+  const logoUrl =
+    logoImage?.url ||
+    "https://www.svgrepo.com/show/508699/landscape-placeholder.svg";
+
   return (
     <Link href={`/rooms/${id}`}>
       <motion.div
@@ -30,15 +40,33 @@ const RoomCard = ({
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.2 }}
       >
-        <Card className="glass glass-hover cursor-pointer group overflow-hidden">
+        <Card className="glass py-0 glass-hover cursor-pointer group overflow-hidden">
+          <div className="relative w-full h-32">
+            <img
+              src={coverUrl}
+              alt={`${name} cover`}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            <div className="absolute -bottom-5 left-4 w-12 h-12 rounded-full border-2 border-card bg-background overflow-hidden">
+              <img
+                src={logoUrl}
+                alt={`${name} logo`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  {isLive && (
+                  {isLive ? (
                     <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       LIVE
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-xs font-medium">
+                      OFFLINE
                     </span>
                   )}
                 </div>
@@ -51,46 +79,14 @@ const RoomCard = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex -space-x-2">
-                {speakers?.slice(0, 3).map((speaker, i) => (
-                  <div
-                    key={i}
-                    className="w-8 h-8 rounded-full border-2 border-card overflow-hidden"
-                  >
-                    <img
-                      src={speaker.avatar}
-                      alt={speaker.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-                {speakers && speakers.length > 3 && (
-                  <div className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">
-                      +{speakers?.length - 3}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col">
-                {speakers?.slice(0, 2).map((speaker, i) => (
-                  <span key={i} className="text-xs text-muted-foreground">
-                    {speaker.name}
-                    {i === 0 && speakers.length > 1 && ","}
-                  </span>
-                ))}
-              </div>
-            </div>
-
             <div className="flex items-center gap-4 pt-3 border-t border-border/50">
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Mic className="w-4 h-4 text-emerald-400" />
-                <span>{speakersCount}</span>
+                <Users className="w-4 h-4" />
+                <span>{totalUsers ?? 0}</span>
               </div>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Users className="w-4 h-4" />
-                <span>{listenersCount}</span>
+                <Radio className="w-4 h-4 text-emerald-400" />
+                <span>{liveUsers ?? 0}</span>
               </div>
             </div>
           </CardContent>

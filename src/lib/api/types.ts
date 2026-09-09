@@ -50,12 +50,19 @@ export interface UserType {
   profilePicture?: string;
 }
 
+export interface FileAttachmentType {
+  publicId: string;
+  url: string;
+}
+
 export interface RoomType {
   id: string;
   name: string;
   description?: string;
-  creator: UserType;
-  users?: UserType[];
+  coverImage?: FileAttachmentType;
+  logoImage?: FileAttachmentType;
+  totalUsers?: number;
+  liveUsers?: number;
 }
 
 export interface RoleType {
@@ -87,7 +94,11 @@ export interface RoomInput {
 }
 
 export type RoomUserRole =
-  "owner" | "admin" | "speaker" | "moderator" | "listener";
+  | "owner"
+  | "admin"
+  | "speaker"
+  | "moderator"
+  | "listener";
 
 export interface RoomUsersQuery {
   roles?: RoomUserRole[];

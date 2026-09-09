@@ -14,16 +14,6 @@ import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { RoomType } from "@/lib/api/types";
 
-const categories = [
-  "All",
-  "Technology",
-  "Business",
-  "Music",
-  "Crypto",
-  "Wellness",
-  "Gaming"
-];
-
 const Rooms = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -87,7 +77,7 @@ const Rooms = () => {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10 pointer-events-none" />
               <Input
                 placeholder="Search rooms..."
                 value={searchQuery}
@@ -100,25 +90,6 @@ const Rooms = () => {
               Filters
             </Button>
           </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide"
-        >
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? "default" : "glass"}
-              size="sm"
-              onClick={() => setSelectedCategory(category)}
-              className="whitespace-nowrap"
-            >
-              {category}
-            </Button>
-          ))}
         </motion.div>
 
         <motion.div
