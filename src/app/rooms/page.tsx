@@ -1,27 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import RoomCard from "@/components/room-card";
 import FloatingOrbs from "@/components/floating-orbs";
+import { FilterDropdown } from "@/components/filter-dropdown";
+import type { FilterConfig } from "@/components/filter-dropdown";
 import { Search, Plus, Filter } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
 import { roomApi } from "@/lib/api/endpoints/room";
-import { RoomType, RoomQuery } from "@/lib/api/types";
+import { categoryApi } from "@/lib/api/endpoints/category";
+import { tagApi } from "@/lib/api/endpoints/tag";
+import type { RoomType, RoomQuery } from "@/lib/api/types";
 import { InfiniteScroll } from "@/components/infinite-scroll";
+
+const filters: FilterConfig[] = [
+  {
+    key: "categories",
+    label: "Categories",
+    fetcher: async () => {
+      const res = await categoryApi.list();
+      return res.data.map((c) => ({
+        value: String(c.id),
+        label: c.name,
+        description: c.description ?? undefined
+      }));
+    },
+    useApiSearch: false,
+    multi: true
+  },
+  {
+    key: "tags",
+    label: "Tags",
+    fetcher: async (search) => {
+      const res = await tagApi.list({ query: search, perPage: 10 });
+      return res.data.map((t) => ({ value: String(t.id), label: t.name }));
+    },
+    useApiSearch: true,
+    multi: true
+  }
+];
 
 const Rooms = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilters, setSelectedFilters] = useState<
+    Record<string, string[]>
+  >({});
 
   const { isUserLoading } = useAuthGuard();
+
+  const activeFilterCount = useMemo(() => {
+    return (
+      (selectedFilters.categories?.length ?? 0) +
+      (selectedFilters.tags?.length ?? 0)
+    );
+  }, [selectedFilters]);
+
+  const roomQuery: RoomQuery = useMemo(() => {
+    return {
+      query: searchQuery || undefined,
+      categoryIds: selectedFilters.categories?.length
+        ? selectedFilters.categories
+        : undefined,
+      tagIds: selectedFilters.tags?.length ? selectedFilters.tags : undefined
+    };
+  }, [searchQuery, selectedFilters]);
 
   if (isUserLoading) {
     return <Loader />;
   }
+
+  const filterTrigger = (
+    <Button variant="glass" className="gap-2 sm:w-auto">
+      <Filter className="w-4 h-4" />
+      Filters
+      {activeFilterCount > 0 && (
+        <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+          {activeFilterCount}
+        </span>
+      )}
+    </Button>
+  );
 
   return (
     <div className="relative min-h-screen pt-24 pb-12 px-4">
@@ -58,19 +121,22 @@ const Rooms = () => {
                 className="pl-10 glass border-border/50 focus:border-primary"
               />
             </div>
-            <Button variant="glass" className="gap-2 sm:w-auto">
-              <Filter className="w-4 h-4" />
-              Filters
-            </Button>
+
+            <FilterDropdown
+              filters={filters}
+              value={selectedFilters}
+              onChange={setSelectedFilters}
+              trigger={filterTrigger}
+            />
           </div>
         </motion.div>
 
         <div>
           <InfiniteScroll<RoomType>
             fetcher={(page, perPage, params) =>
-              roomApi.list({ ...params, page, perPage } as unknown as RoomQuery)
+              roomApi.list({ ...params, page, perPage })
             }
-            params={{ search: searchQuery }}
+            params={roomQuery}
             perPage={10}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >

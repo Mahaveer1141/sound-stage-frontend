@@ -83,22 +83,6 @@ const Landing = () => {
               </Link>
             </div>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-20 flex justify-center"
-          >
-            <div className="glass rounded-2xl p-8 flex items-center gap-8">
-              <AudioWave isActive size="lg" />
-              <div className="text-left">
-                <p className="text-sm text-muted-foreground mb-1">LIVE NOW</p>
-                <p className="font-semibold">Tech Talk: Future of AI</p>
-                <p className="text-sm text-muted-foreground">2,847 listening</p>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 

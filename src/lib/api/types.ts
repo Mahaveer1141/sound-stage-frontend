@@ -66,6 +66,8 @@ export interface TagType {
   name: string;
 }
 
+export type RoomAccessType = "public" | "private";
+
 export interface RoomType {
   id: string;
   name: string;
@@ -74,6 +76,9 @@ export interface RoomType {
   logoImage?: FileAttachmentType;
   totalUsers?: number;
   liveUsers?: number;
+  type?: RoomAccessType;
+  isRoomUser?: boolean;
+  isFavourited?: boolean;
 }
 
 export interface RoleType {

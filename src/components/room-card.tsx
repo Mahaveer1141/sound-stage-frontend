@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Radio } from "lucide-react";
+import { Users, Radio, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import AudioWave from "./audio-wave";
+import { roomUserFavouriteApi } from "@/lib/api/endpoints/room-user-favourite";
 import type { FileAttachmentType } from "@/lib/api/types";
 
 interface RoomCardProps {
@@ -12,6 +15,7 @@ interface RoomCardProps {
   name: string;
   totalUsers?: number;
   liveUsers?: number;
+  isFavourited?: boolean;
   coverImage?: FileAttachmentType;
   logoImage?: FileAttachmentType;
 }
@@ -21,10 +25,37 @@ const RoomCard = ({
   name,
   totalUsers,
   liveUsers,
+  isFavourited: initialFavourited = false,
   coverImage,
   logoImage
 }: RoomCardProps) => {
+  const [isFavourited, setIsFavourited] = useState(initialFavourited);
+  const [isToggling, setIsToggling] = useState(false);
   const isLive = (liveUsers ?? 0) > 0;
+
+  const handleFavourite = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isToggling) return;
+
+    setIsToggling(true);
+    const newFavourited = !isFavourited;
+
+    try {
+      if (newFavourited) {
+        await roomUserFavouriteApi.add(id);
+        toast.success("Room added to favorites");
+      } else {
+        await roomUserFavouriteApi.remove(id);
+        toast.success("Room removed from favorites");
+      }
+      setIsFavourited(newFavourited);
+    } catch {
+      toast.error("Failed to update favorites");
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   const coverUrl =
     coverImage?.url ||
@@ -74,17 +105,44 @@ const RoomCard = ({
                   {name}
                 </h3>
               </div>
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                <AudioWave isActive={isLive} size="sm" />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isToggling}
+                  onClick={handleFavourite}
+                  aria-pressed={isFavourited}
+                  title={
+                    isFavourited ? "Remove from favorites" : "Add to favorites"
+                  }
+                  className={`p-1.5 rounded-full hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
+                    isToggling ? "opacity-50" : ""
+                  }`}
+                >
+                  <Star
+                    className={`w-5 h-5 ${
+                      isFavourited ? "text-yellow-400" : "text-muted-foreground"
+                    }`}
+                    fill={isFavourited ? "currentColor" : "none"}
+                  />
+                </button>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <AudioWave isActive={isLive} size="sm" />
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-4 pt-3 border-t border-border/50">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <div
+                className="flex items-center gap-1.5 text-sm text-muted-foreground"
+                title={`Users in Room: ${totalUsers ?? 0}`}
+              >
                 <Users className="w-4 h-4" />
                 <span>{totalUsers ?? 0}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <div
+                className="flex items-center gap-1.5 text-sm text-muted-foreground"
+                title={`Live users in Room: ${liveUsers ?? 0}`}
+              >
                 <Radio className="w-4 h-4 text-emerald-400" />
                 <span>{liveUsers ?? 0}</span>
               </div>
