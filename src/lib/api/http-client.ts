@@ -121,7 +121,12 @@ class HttpClient {
     };
 
     if (config.body !== undefined) {
-      options.body = JSON.stringify(config.body);
+      if (config.body instanceof FormData) {
+        headers.delete("Content-Type");
+        options.body = config.body;
+      } else {
+        options.body = JSON.stringify(config.body);
+      }
     }
 
     if (config.cache) {

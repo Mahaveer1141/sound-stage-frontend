@@ -10,7 +10,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import FloatingOrbs from "@/components/floating-orbs";
-import { SignUpFormData } from "@/lib/validations/auth";
+
 import { ProfileForm } from "@/components/profile-form";
 import { toast } from "sonner";
 import { userApi } from "@/lib/api/endpoints/user";
@@ -22,14 +22,10 @@ export default function ProfilePage() {
   const { user, isUserLoading } = useAuthGuard();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (data: SignUpFormData) => {
+  const handleSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      await userApi.updateProfile({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        profilePicture: data.profilePicture
-      });
+      await userApi.updateProfile(data);
       toast.success("Profile updated successfully");
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
@@ -68,7 +64,7 @@ export default function ProfilePage() {
                 email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                profilePicture: user.profilePicture
+                profilePicture: user.profilePicture?.url
               }}
               onSubmit={handleSubmit}
               isLoading={isLoading}

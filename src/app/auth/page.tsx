@@ -185,7 +185,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResendLoading, setIsResendLoading] = useState(false);
 
-  const { setEmail, clearEmail } = useAuthEmailStore();
+  const { setEmail, setOtpVerified, clearEmail } = useAuthEmailStore();
   const { isUserLoading, refreshUser } = useAuthGuard();
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema as any),
@@ -234,6 +234,7 @@ const Auth = () => {
       );
       const isNewUser = !response.data.accessToken;
       if (isNewUser) {
+        setOtpVerified(true);
         router.push("/auth/sign_up");
       } else {
         clearEmail();

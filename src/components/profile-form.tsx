@@ -1,11 +1,10 @@
 import React, { useState, useRef } from "react";
-import { Camera, User } from "lucide-react";
+import { Camera, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
-import { SignUpFormData, signUpSchema } from "@/lib/validations/auth";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { SignUpFormData } from "@/lib/validations/auth";
 import {
   Form,
   FormField,
@@ -19,7 +18,7 @@ import { motion } from "framer-motion";
 
 export interface ProfileFormProps {
   initialData?: Partial<SignUpFormData>;
-  onSubmit: (data: SignUpFormData) => Promise<void>;
+  onSubmit: (data: FormData) => Promise<void>;
   isLoading: boolean;
   submitLabel?: string;
   isEmailDisabled?: boolean;
@@ -36,9 +35,10 @@ export function ProfileForm({
   const [profilePhoto, setProfilePhoto] = useState<string | null>(
     initialData?.profilePicture || null
   );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isRemoved, setIsRemoved] = useState(false);
 
   const form = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema as any),
     defaultValues: {
       email: initialData?.email || "",
       firstName: initialData?.firstName || "",
@@ -50,6 +50,8 @@ export function ProfileForm({
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
+      setIsRemoved(false);
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePhoto(reader.result as string);
@@ -59,33 +61,68 @@ export function ProfileForm({
     }
   };
 
+  const handleRemovePhoto = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setSelectedFile(null);
+    setIsRemoved(true);
+    setProfilePhoto(null);
+    form.setValue("profilePicture", "");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleFormSubmit = async (values: SignUpFormData) => {
+    const formData = new FormData();
+    formData.append("email", values.email);
+    formData.append("firstName", values.firstName);
+    if (values.lastName) {
+      formData.append("lastName", values.lastName);
+    }
+    if (selectedFile) {
+      formData.append("profilePicture", selectedFile);
+    } else if (isRemoved) {
+      formData.append("removeProfilePicture", "true");
+    }
+    await onSubmit(formData);
+  };
+
   return (
     <Form {...form}>
       <motion.form
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-6"
       >
         <FormField
           control={form.control}
           name="profilePicture"
-          render={({ field }) => (
+          render={() => (
             <div className="flex justify-center">
-              <div className="relative">
+              <div
+                className="relative cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <Avatar className="w-24 h-24 border-2 border-primary/50">
                   <AvatarImage src={profilePhoto || undefined} />
                   <AvatarFallback className="bg-surface text-muted-foreground">
                     <User className="w-10 h-10" />
                   </AvatarFallback>
                 </Avatar>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
-                >
+                <div className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
                   <Camera className="w-4 h-4 text-primary-foreground" />
-                </button>
+                </div>
+                {profilePhoto && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemovePhoto(e)}
+                    title="Remove photo"
+                    className="absolute top-0 right-0 w-6 h-6 bg-destructive rounded-full flex items-center justify-center shadow-lg hover:bg-destructive/90 transition-colors"
+                  >
+                    <X className="w-3 h-3 text-destructive-foreground" />
+                  </button>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"

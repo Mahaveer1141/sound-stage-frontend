@@ -5,11 +5,7 @@ export const userApi = {
   currentUser: (): Promise<ApiBaseResponse<UserType>> => {
     return api.get("/users/current");
   },
-  updateProfile: (data: {
-    firstName: string;
-    lastName?: string;
-    profilePicture?: string;
-  }): Promise<ApiBaseResponse<UserType>> => {
+  updateProfile: (data: FormData): Promise<ApiBaseResponse<UserType>> => {
     return api.put("/users/profile", data);
   }
 };

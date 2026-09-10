@@ -3,10 +3,12 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 interface AuthEmailState {
   email: string;
+  isOtpVerified: boolean;
 }
 
 interface AuthEmailActions {
   setEmail: (email: string) => void;
+  setOtpVerified: (verified: boolean) => void;
   clearEmail: () => void;
 }
 
@@ -18,8 +20,10 @@ const useAuthEmailStore = create<AuthEmailStore>()(
   persist(
     (set) => ({
       email: "",
-      setEmail: (email: string) => set({ email }),
-      clearEmail: () => set({ email: "" })
+      isOtpVerified: false,
+      setEmail: (email: string) => set({ email, isOtpVerified: false }),
+      setOtpVerified: (isOtpVerified: boolean) => set({ isOtpVerified }),
+      clearEmail: () => set({ email: "", isOtpVerified: false })
     }),
     {
       name: STORE_NAME,

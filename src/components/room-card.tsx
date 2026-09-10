@@ -8,7 +8,11 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import AudioWave from "./audio-wave";
 import { roomUserFavouriteApi } from "@/lib/api/endpoints/room-user-favourite";
-import type { FileAttachmentType } from "@/lib/api/types";
+import type {
+  FileAttachmentType,
+  CategoryType,
+  TagType
+} from "@/lib/api/types";
 
 interface RoomCardProps {
   id: string;
@@ -18,6 +22,8 @@ interface RoomCardProps {
   isFavourited?: boolean;
   coverImage?: FileAttachmentType;
   logoImage?: FileAttachmentType;
+  categories?: CategoryType[];
+  tags?: TagType[];
 }
 
 const RoomCard = ({
@@ -27,7 +33,9 @@ const RoomCard = ({
   liveUsers,
   isFavourited: initialFavourited = false,
   coverImage,
-  logoImage
+  logoImage,
+  categories,
+  tags
 }: RoomCardProps) => {
   const [isFavourited, setIsFavourited] = useState(initialFavourited);
   const [isToggling, setIsToggling] = useState(false);
@@ -130,6 +138,33 @@ const RoomCard = ({
                 </div>
               </div>
             </div>
+
+            {categories && categories.length > 0 && (
+              <div className="flex items-center gap-2 pt-2 mb-5">
+                {categories.map((category) => (
+                  <span
+                    title={category.description}
+                    key={category.id}
+                    className="px-2 py-1 rounded-full bg-primary/10 text-xs text-primary"
+                  >
+                    {category.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {tags && tags.length > 0 && (
+              <div className="flex items-center gap-2 pt-2 mb-5">
+                {tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="px-2 py-1 rounded-full bg-muted text-xs text-muted-foreground"
+                  >
+                    #{tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <div className="flex items-center gap-4 pt-3 border-t border-border/50">
               <div

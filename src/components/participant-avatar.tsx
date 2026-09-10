@@ -70,7 +70,7 @@ const ParticipantAvatar = ({
   };
 
   const avatar =
-    roomUser.user.profilePicture ||
+    roomUser.user.profilePicture?.url ||
     "https://api.dicebear.com/7.x/avataaars/svg?seed=alex";
   const isSpeaking = !isMuted;
 

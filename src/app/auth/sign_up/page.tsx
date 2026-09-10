@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { SignUpFormData } from "@/lib/validations/auth";
 import { ProfileForm } from "@/components/profile-form";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/endpoints/auth";
@@ -23,18 +22,14 @@ import useAuthEmailStore from "@/store/useAuthEmailStore";
 
 const Signup = () => {
   const router = useRouter();
-  const { email, clearEmail } = useAuthEmailStore();
+  const { email, isOtpVerified, clearEmail } = useAuthEmailStore();
   const [isLoading, setIsLoading] = useState(false);
   const { isUserLoading, refreshUser } = useAuthGuard();
 
-  const handleSubmit = async (data: SignUpFormData) => {
+  const handleSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      const response = await authApi.signUp({
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName
-      });
+      const response = await authApi.signUp(data);
       setTokens(response.data);
       clearEmail();
       await refreshUser();
@@ -46,9 +41,11 @@ const Signup = () => {
     }
   };
 
-  if (!isUserLoading && !email) {
-    router.replace("/auth");
-  }
+  useEffect(() => {
+    if (!isUserLoading && !isOtpVerified) {
+      router.replace("/auth");
+    }
+  }, [isUserLoading, isOtpVerified, router]);
 
   if (isUserLoading) {
     return <Loader />;

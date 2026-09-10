@@ -47,7 +47,7 @@ export interface UserType {
   firstName: string;
   lastName: string;
   fullName: string;
-  profilePicture?: string;
+  profilePicture?: FileAttachmentType;
 }
 
 export interface FileAttachmentType {
@@ -79,6 +79,8 @@ export interface RoomType {
   type?: RoomAccessType;
   isRoomUser?: boolean;
   isFavourited?: boolean;
+  categories?: CategoryType[];
+  tags?: TagType[];
 }
 
 export interface RoleType {
