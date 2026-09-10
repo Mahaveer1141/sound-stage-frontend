@@ -4,11 +4,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 interface AuthEmailState {
   email: string;
   isOtpVerified: boolean;
+  otpExpiresAt: number | null;
 }
 
 interface AuthEmailActions {
   setEmail: (email: string) => void;
   setOtpVerified: (verified: boolean) => void;
+  startOtpTimer: () => void;
+  resetOtpTimer: () => void;
   clearEmail: () => void;
 }
 
@@ -21,13 +24,21 @@ const useAuthEmailStore = create<AuthEmailStore>()(
     (set) => ({
       email: "",
       isOtpVerified: false,
+      otpExpiresAt: null,
       setEmail: (email: string) => set({ email, isOtpVerified: false }),
       setOtpVerified: (isOtpVerified: boolean) => set({ isOtpVerified }),
-      clearEmail: () => set({ email: "", isOtpVerified: false })
+      startOtpTimer: () => set({ otpExpiresAt: Date.now() + 60_000 }),
+      resetOtpTimer: () => set({ otpExpiresAt: Date.now() + 60_000 }),
+      clearEmail: () =>
+        set({ email: "", isOtpVerified: false, otpExpiresAt: null })
     }),
     {
       name: STORE_NAME,
-      storage: createJSONStorage(() => sessionStorage)
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        email: state.email,
+        isOtpVerified: state.isOtpVerified
+      })
     }
   )
 );

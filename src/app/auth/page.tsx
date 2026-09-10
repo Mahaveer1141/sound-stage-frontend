@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Mail } from "lucide-react";
 import { useForm, useWatch, UseFormReturn } from "react-hook-form";
@@ -110,6 +110,35 @@ const OtpForm = ({
   isResendLoading: boolean;
 }) => {
   const otpValue = useWatch({ control: otpForm.control, name: "otp" });
+  const { otpExpiresAt } = useAuthEmailStore();
+  const [remainingSeconds, setRemainingSeconds] = useState(60);
+
+  useEffect(() => {
+    if (!otpExpiresAt) return;
+
+    const update = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((otpExpiresAt - Date.now()) / 1000)
+      );
+      setRemainingSeconds(remaining);
+      return remaining;
+    };
+
+    const timeout = setTimeout(update, 0);
+    const interval = setInterval(() => {
+      if (update() === 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [otpExpiresAt]);
+
+  const canResend = remainingSeconds === 0;
 
   return (
     <Form {...otpForm}>
@@ -159,7 +188,7 @@ const OtpForm = ({
         <p className="text-center text-sm text-muted-foreground">
           {isResendLoading ? (
             "Sending OTP..."
-          ) : (
+          ) : canResend ? (
             <>
               {"Didn't receive the code? "}
               <button
@@ -171,6 +200,11 @@ const OtpForm = ({
               >
                 Resend
               </button>
+            </>
+          ) : (
+            <>
+              {"Resend in "}
+              <span className="text-primary">{remainingSeconds}s</span>
             </>
           )}
         </p>
@@ -185,7 +219,8 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResendLoading, setIsResendLoading] = useState(false);
 
-  const { setEmail, setOtpVerified, clearEmail } = useAuthEmailStore();
+  const { setEmail, setOtpVerified, startOtpTimer, resetOtpTimer, clearEmail } =
+    useAuthEmailStore();
   const { isUserLoading, refreshUser } = useAuthGuard();
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema as any),
@@ -199,6 +234,12 @@ const Auth = () => {
       otp: ""
     }
   });
+
+  useEffect(() => {
+    if (step === "otp") {
+      startOtpTimer();
+    }
+  }, [step, startOtpTimer]);
 
   const handleRequestOtp = async (data: EmailFormData) => {
     setIsLoading(true);
@@ -217,6 +258,7 @@ const Auth = () => {
     setIsResendLoading(true);
     try {
       await authApi.requestOtp(emailForm.getValues("email"));
+      resetOtpTimer();
       toast.success("OTP sent successfully");
     } catch (error: unknown) {
       toast.error((error as ApiError).message);

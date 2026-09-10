@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useForm } from "react-hook-form";
-import { SignUpFormData } from "@/lib/validations/auth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { signUpSchema, SignUpFormData } from "@/lib/validations/auth";
 import {
   Form,
   FormField,
@@ -15,6 +16,9 @@ import {
 } from "@/components/ui/form";
 import { Spinner } from "@/components/ui/spinner";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export interface ProfileFormProps {
   initialData?: Partial<SignUpFormData>;
@@ -39,6 +43,7 @@ export function ProfileForm({
   const [isRemoved, setIsRemoved] = useState(false);
 
   const form = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema as any),
     defaultValues: {
       email: initialData?.email || "",
       firstName: initialData?.firstName || "",
@@ -49,16 +54,29 @@ export function ProfileForm({
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setIsRemoved(false);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePhoto(reader.result as string);
-        form.setValue("profilePicture", reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image must be smaller than 10 MB");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
     }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files are allowed");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+    setSelectedFile(file);
+    setIsRemoved(false);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePhoto(reader.result as string);
+      form.setValue("profilePicture", reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemovePhoto = (e: React.MouseEvent<HTMLButtonElement>) => {
