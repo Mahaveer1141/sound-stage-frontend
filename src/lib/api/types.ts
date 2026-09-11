@@ -134,6 +134,7 @@ export interface RoomQuery extends Pagination, QueryParams {
   categoryIds?: string[];
   tagIds?: string[];
   joined?: boolean;
+  live?: boolean;
 }
 
 export interface RoomUsersQuery extends Pagination, QueryParams {

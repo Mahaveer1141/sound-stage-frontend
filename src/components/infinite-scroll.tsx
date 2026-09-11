@@ -17,6 +17,7 @@ interface InfiniteScrollProps<T> {
   page?: number;
   perPage?: number;
   className?: string;
+  onTotalCount?: (totalCount: number) => void;
   children: (item: T, index: number) => React.ReactNode;
 }
 
@@ -26,6 +27,7 @@ export function InfiniteScroll<T>({
   page = 1,
   perPage = 10,
   className = "space-y-4",
+  onTotalCount,
   children
 }: InfiniteScrollProps<T>) {
   const fetcherRef = useRef(fetcher);
@@ -33,6 +35,9 @@ export function InfiniteScroll<T>({
 
   const paramsRef = useRef(params);
   paramsRef.current = params;
+
+  const onTotalCountRef = useRef(onTotalCount);
+  onTotalCountRef.current = onTotalCount;
 
   const [items, setItems] = useState<T[]>([]);
   const [currentPage, setCurrentPage] = useState(page);
@@ -55,6 +60,7 @@ export function InfiniteScroll<T>({
         });
         setHasMore(pageToFetch < res.pagination.totalPages);
         setCurrentPage(pageToFetch + 1);
+        onTotalCountRef.current?.(res.pagination.totalCount);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to load");
       } finally {

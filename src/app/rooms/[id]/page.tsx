@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,20 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { ApiError } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot
+} from "@/components/ui/input-otp";
 import Loader from "@/components/loader";
 import {
   RoomType,
@@ -47,6 +61,11 @@ const Room = () => {
 
   const [isRaisingHand, setIsRaisingHand] = useState(false);
   const [raisedHandsCount] = useState(0);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+  const joinAttemptedRef = useRef(false);
   const [room, setRoom] = useState<RoomType | null>(null);
   const [isRoomLoading, setIsRoomLoading] = useState(false);
   const [currentRoomUser, setCurrentRoomUser] = useState<RoomUserType | null>(
@@ -56,7 +75,8 @@ const Room = () => {
     useState(false);
 
   const { onConnect, subscribe, send, isConnected } = useWebSocket(
-    `/ws/rooms/${id}`
+    `/ws/rooms/${id}`,
+    hasJoined
   );
 
   const {
@@ -67,7 +87,8 @@ const Room = () => {
   } = useRoomUsers({
     roomId: id as string,
     roles: ["admin", "speaker", "moderator", "owner"],
-    perPage: 12
+    perPage: 12,
+    enabled: hasJoined
   });
   const {
     users: listeners,
@@ -77,7 +98,8 @@ const Room = () => {
   } = useRoomUsers({
     roomId: id as string,
     roles: ["listener"],
-    perPage: 24
+    perPage: 24,
+    enabled: hasJoined
   });
   const { isMuted, toggleMute, remoteStream } = useWebRTC({
     send,
@@ -95,8 +117,11 @@ const Room = () => {
     try {
       const res = await roomApi.show(id as string);
       setRoom(res.data);
-    } catch (_) {
-      toast.error("Failed to fetch room");
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to fetch room"
+      );
+      router.push("/rooms");
     } finally {
       setIsRoomLoading(false);
     }
@@ -122,16 +147,52 @@ const Room = () => {
     }
   };
 
+  const joinRoom = async (privateCode = "") => {
+    if (!id || isJoining) return;
+
+    setIsJoining(true);
+    try {
+      const res = await roomApi.join(id as string, privateCode);
+      setCurrentRoomUser(res.data);
+      setHasJoined(true);
+      setIsJoinModalOpen(false);
+      setJoinCode("");
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Failed to join room";
+      toast.error(message);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   useEffect(() => {
     fetchRoom();
     fetchCurrentRoomUser();
-  }, [id]);
+  }, []);
 
   useEffect(() => {
+    if (!room || isCurrentRoomUserLoading) return;
+
+    if (room.type === "private" && !currentRoomUser) {
+      setIsJoinModalOpen(true);
+      return;
+    }
+
+    if (currentRoomUser) {
+      joinRoom();
+    }
+  }, [isRoomLoading, isCurrentRoomUserLoading]);
+
+  useEffect(() => {
+    if (!hasJoined) return;
+
     onConnect(() => {
       send("join_room", {});
     });
+  }, [hasJoined]);
 
+  useEffect(() => {
     subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
       console.error("Ws Error: ", ws_error);
     });
@@ -345,6 +406,68 @@ const Room = () => {
           </div>
         </div>
       </motion.div>
+
+      <Dialog
+        open={isJoinModalOpen}
+        onOpenChange={(open) => {
+          setIsJoinModalOpen(open);
+          if (!open && !currentRoomUser) {
+            router.push("/rooms");
+          }
+        }}
+      >
+        <DialogContent className="glass border-border/50">
+          <DialogHeader>
+            <DialogTitle>Private Room</DialogTitle>
+            <DialogDescription>
+              {room.name} requires an invite code to join. Enter the 8-character
+              code.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-center py-4">
+            <InputOTP
+              maxLength={8}
+              value={joinCode}
+              onChange={(value) => {
+                setJoinCode(value.toUpperCase());
+              }}
+              onComplete={(value) => joinRoom(value.toUpperCase())}
+              disabled={isJoining}
+            >
+              <InputOTPGroup>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <InputOTPSlot
+                    key={i}
+                    index={i}
+                    className="h-11 w-11 text-lg"
+                  />
+                ))}
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              className="hover:cursor-pointer"
+              variant="glass"
+              onClick={() => router.push("/rooms")}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="hover:cursor-pointer"
+              type="button"
+              variant="glow"
+              disabled={joinCode.length !== 8 || isJoining}
+              onClick={() => joinRoom(joinCode)}
+            >
+              {isJoining ? "Joining..." : "Join Room"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

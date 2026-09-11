@@ -48,7 +48,7 @@ export function useRoomUsers({
 
   useEffect(() => {
     fetchUsers(1);
-  }, []);
+  }, [enabled]);
 
   return {
     users,

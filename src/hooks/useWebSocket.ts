@@ -1,11 +1,13 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { EventType, ws, WsMessageHandler, WsEventHandler } from "@/lib/api";
 
-export function useWebSocket(path: string) {
+export function useWebSocket(path: string, enabled = true) {
   const unsubscribesRef = useRef<Array<() => void>>([]);
   const [isConnected, setIsConnected] = useState(ws.isConnected());
 
   useEffect(() => {
+    if (!enabled) return;
+
     (async () => {
       if (!ws.isConnected()) {
         await ws.connect(path).catch(console.error);
@@ -20,7 +22,7 @@ export function useWebSocket(path: string) {
       unsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
       unsubscribesRef.current = [];
     };
-  }, []);
+  }, [enabled]);
 
   const subscribe = useCallback(
     <T>(eventType: EventType, handler: WsMessageHandler<T>): (() => void) => {

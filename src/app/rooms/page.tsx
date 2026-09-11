@@ -86,6 +86,15 @@ const filters: FilterConfig[] = [
     },
     useApiSearch: false,
     multi: false
+  },
+  {
+    key: "live",
+    label: "Live",
+    fetcher: async () => {
+      return BOOLEAN_OPTIONS;
+    },
+    useApiSearch: false,
+    multi: false
   }
 ];
 
@@ -94,6 +103,7 @@ const Rooms = () => {
   const [selectedFilters, setSelectedFilters] = useState<
     Record<string, string[]>
   >({});
+  const [totalRooms, setTotalRooms] = useState<number | null>(null);
 
   const { isUserLoading } = useAuthGuard();
 
@@ -104,6 +114,7 @@ const Rooms = () => {
       (selectedFilters.favourites?.length ?? 0) +
       (selectedFilters.mine?.length ?? 0) +
       (selectedFilters.joined?.length ?? 0) +
+      (selectedFilters.live?.length ?? 0) +
       (selectedFilters.type?.length ?? 0)
     );
   }, [selectedFilters]);
@@ -123,6 +134,9 @@ const Rooms = () => {
         : undefined,
       joined: selectedFilters.joined?.length
         ? selectedFilters.joined[0] === "true"
+        : undefined,
+      live: selectedFilters.live?.length
+        ? selectedFilters.live[0] === "true"
         : undefined,
       type: selectedFilters.type?.length ? selectedFilters.type[0] : undefined
     };
@@ -187,6 +201,12 @@ const Rooms = () => {
               trigger={filterTrigger}
             />
           </div>
+
+          {totalRooms !== null && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              {totalRooms} {totalRooms === 1 ? "room" : "rooms"} found
+            </p>
+          )}
         </motion.div>
 
         <div>
@@ -196,6 +216,7 @@ const Rooms = () => {
             }
             params={roomQuery}
             perPage={10}
+            onTotalCount={setTotalRooms}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {(room) => (

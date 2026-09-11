@@ -22,6 +22,13 @@ export const roomApi = {
     return api.patch(`/rooms/${id}/private-code`);
   },
 
+  join: (
+    id: string,
+    privateCode?: string
+  ): Promise<ApiBaseResponse<RoomUserType>> => {
+    return api.post(`/rooms/${id}/users`, { privateCode: privateCode ?? "" });
+  },
+
   list: (query?: RoomQuery): Promise<ApiPaginatedResponse<RoomType[]>> => {
     return api.get<RoomType[], ApiPaginatedResponse<RoomType[]>>(`/rooms`, {
       params: query
