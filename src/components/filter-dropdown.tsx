@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -102,6 +104,12 @@ export function FilterDropdown({
     onChange({ ...value, [filterKey]: [optionValue] });
   };
 
+  const clearFilter = (filterKey: string) => {
+    onChange({ ...value, [filterKey]: [] });
+  };
+
+  const hasActiveFilters = filters.some((f) => (value[f.key]?.length ?? 0) > 0);
+
   const handleOpenChange = (open: boolean, filter: FilterConfig) => {
     if (open) {
       loadApiOptions(filter, optionSearches[filter.key] ?? "");
@@ -137,8 +145,24 @@ export function FilterDropdown({
             <DropdownMenuSubTrigger className="w-full cursor-pointer">
               {filter.label}
               {value[filter.key]?.length ? (
-                <span className="text-xs bg-white h-5 w-5 flex items-center justify-center text-black rounded-full">
-                  {value[filter.key].length}
+                <span className="flex items-center gap-1.5">
+                  <span className="text-xs bg-white h-5 w-5 flex items-center justify-center text-black rounded-full">
+                    {value[filter.key].length}
+                  </span>
+                  <button
+                    type="button"
+                    title={`Clear ${filter.label}`}
+                    aria-label={`Clear ${filter.label}`}
+                    className="h-5 w-5 hover:cursor-pointer flex items-center justify-center rounded-full text-muted-foreground"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      clearFilter(filter.key);
+                    }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </span>
               ) : null}
             </DropdownMenuSubTrigger>
@@ -215,6 +239,22 @@ export function FilterDropdown({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         ))}
+
+        {hasActiveFilters && (
+          <>
+            <DropdownMenuSeparator className="my-2" />
+            <DropdownMenuItem
+              className="cursor-pointer text-muted-foreground"
+              onSelect={(e) => {
+                e.preventDefault();
+                onChange({});
+              }}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Clear all filters
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

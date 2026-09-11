@@ -46,6 +46,7 @@ const Room = () => {
   const router = useRouter();
 
   const [isRaisingHand, setIsRaisingHand] = useState(false);
+  const [raisedHandsCount] = useState(0);
   const [room, setRoom] = useState<RoomType | null>(null);
   const [isRoomLoading, setIsRoomLoading] = useState(false);
   const [currentRoomUser, setCurrentRoomUser] = useState<RoomUserType | null>(
@@ -113,7 +114,7 @@ const Room = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, role: RoomUserRole) => {
+  const updateUserRole = async (userId: number, role: RoomUserRole) => {
     try {
       await roomApi.updateUserRole(id as string, userId, role);
     } catch (_) {
@@ -145,7 +146,7 @@ const Room = () => {
       refetchSpeakers();
     });
 
-    subscribe<{ userId: string; role: RoomUserRole }>(
+    subscribe<{ userId: number; role: RoomUserRole }>(
       "user_role_updated",
       (_) => {
         refetchListeners();
@@ -276,7 +277,7 @@ const Room = () => {
             </h2>
             {currentRoomUser?.isAdmin && (
               <Button variant="glass" size="sm" className="text-xs">
-                View Raised Hands ({room.users?.filter((_) => false).length})
+                View Raised Hands ({raisedHandsCount})
               </Button>
             )}
           </div>

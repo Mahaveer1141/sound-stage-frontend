@@ -15,7 +15,7 @@ import type {
 } from "@/lib/api/types";
 
 interface RoomCardProps {
-  id: string;
+  id: number;
   name: string;
   totalUsers?: number;
   liveUsers?: number;
@@ -122,7 +122,7 @@ const RoomCard = ({
                   title={
                     isFavourited ? "Remove from favorites" : "Add to favorites"
                   }
-                  className={`p-1.5 rounded-full hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
+                  className={`p-1.5 rounded-full hover:bg-muted hover:cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
                     isToggling ? "opacity-50" : ""
                   }`}
                 >

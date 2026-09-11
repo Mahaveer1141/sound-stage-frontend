@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Mic, ArrowRight } from "lucide-react";
+import { Mic, Save } from "lucide-react";
 import FloatingOrbs from "@/components/floating-orbs";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
@@ -11,27 +11,54 @@ import { RoomForm } from "@/components/room-form";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
+import type { RoomType } from "@/lib/api/types";
 
-const CreateRoom = () => {
+const EditRoom = () => {
   const router = useRouter();
+  const { id } = useParams();
   const { isUserLoading } = useAuthGuard();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const createRoom = async (data: FormData) => {
-    setIsLoading(true);
+  const [room, setRoom] = useState<RoomType | null>(null);
+  const [isRoomLoading, setIsRoomLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchRoom = async () => {
+      if (!id) return;
+      setIsRoomLoading(true);
+      try {
+        const res = await roomApi.show(id as string);
+        setRoom(res.data);
+      } catch {
+        toast.error("Failed to load room");
+        router.push("/rooms");
+      } finally {
+        setIsRoomLoading(false);
+      }
+    };
+    fetchRoom();
+  }, [id, router]);
+
+  const updateRoom = async (data: FormData) => {
+    if (!id) return;
+    setIsSubmitting(true);
     try {
-      await roomApi.create(data);
-      toast.success("Room created successfully");
-      router.push("/rooms");
+      await roomApi.update(id as string, data);
+      toast.success("Room updated successfully");
+      router.push(`/rooms/${id}`);
     } catch (error) {
       toast.error((error as ApiError).message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || isRoomLoading) {
     return <Loader />;
+  }
+
+  if (!room) {
+    return null;
   }
 
   return (
@@ -49,11 +76,9 @@ const CreateRoom = () => {
               <Mic className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            Create a New Stage
-          </h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">Edit Stage</h1>
           <p className="text-muted-foreground text-lg">
-            Set up your live audio room and start broadcasting
+            Update your room details, images, and settings
           </p>
         </motion.div>
 
@@ -64,30 +89,19 @@ const CreateRoom = () => {
           className="glass rounded-2xl p-8"
         >
           <RoomForm
-            onSubmit={createRoom}
-            isLoading={isLoading}
+            initialData={room}
+            onSubmit={updateRoom}
+            isLoading={isSubmitting}
             submitLabel={
               <span className="flex items-center justify-center gap-2">
-                Go Live <ArrowRight className="w-4 h-4" />
+                Save Changes <Save className="w-4 h-4" />
               </span>
             }
           />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-8 text-center"
-        >
-          <p className="text-muted-foreground text-sm">
-            A descriptive room name, categories, and tags help the right
-            audience find you.
-          </p>
         </motion.div>
       </div>
     </div>
   );
 };
 
-export default CreateRoom;
+export default EditRoom;

@@ -42,7 +42,7 @@ export interface TokenPair {
 }
 
 export interface UserType {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;
@@ -56,20 +56,20 @@ export interface FileAttachmentType {
 }
 
 export interface CategoryType {
-  id: string;
+  id: number;
   name: string;
   description?: string;
 }
 
 export interface TagType {
-  id: string;
+  id: number;
   name: string;
 }
 
 export type RoomAccessType = "public" | "private";
 
 export interface RoomType {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   coverImage?: FileAttachmentType;
@@ -77,20 +77,22 @@ export interface RoomType {
   totalUsers?: number;
   liveUsers?: number;
   type?: RoomAccessType;
+  privateCode?: string;
   isRoomUser?: boolean;
   isFavourited?: boolean;
+  isChatEnabled?: boolean;
   categories?: CategoryType[];
   tags?: TagType[];
 }
 
 export interface RoleType {
-  id: string;
+  id: number;
   name: string;
   description?: string;
 }
 
 export interface RoomUserType {
-  id: string;
+  id: number;
   user: UserType;
   role: RoleType;
   isAdmin: boolean;
@@ -109,6 +111,10 @@ export interface SignUpInput {
 export interface RoomInput {
   name: string;
   description?: string;
+  type?: RoomAccessType;
+  isChatEnabled?: boolean;
+  categories?: number[];
+  tags?: number[];
 }
 
 export type RoomUserRole =

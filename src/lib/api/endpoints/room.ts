@@ -2,8 +2,6 @@ import { api } from "@/lib/api";
 import type {
   ApiBaseResponse,
   ApiPaginatedResponse,
-  QueryParams,
-  RoomInput,
   RoomType,
   RoomUserType,
   RoomQuery,
@@ -12,15 +10,16 @@ import type {
 } from "@/lib/api/types";
 
 export const roomApi = {
-  create: (input: RoomInput): Promise<ApiBaseResponse<RoomType>> => {
+  create: (input: FormData): Promise<ApiBaseResponse<RoomType>> => {
     return api.post("/rooms", input);
   },
 
-  update: (
-    id: string,
-    input: RoomInput
-  ): Promise<ApiBaseResponse<RoomType>> => {
+  update: (id: string, input: FormData): Promise<ApiBaseResponse<RoomType>> => {
     return api.put(`/rooms/${id}`, input);
+  },
+
+  updatePrivateCode: (id: number): Promise<ApiBaseResponse<unknown>> => {
+    return api.patch(`/rooms/${id}/private-code`);
   },
 
   list: (query?: RoomQuery): Promise<ApiPaginatedResponse<RoomType[]>> => {
@@ -49,7 +48,7 @@ export const roomApi = {
 
   updateUserRole: (
     roomId: string,
-    userId: string,
+    userId: number,
     role: RoomUserRole
   ): Promise<ApiBaseResponse<RoomUserType>> => {
     return api.put(`/rooms/${roomId}/users/${userId}/role`, { role });

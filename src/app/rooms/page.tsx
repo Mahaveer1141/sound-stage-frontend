@@ -18,6 +18,11 @@ import { tagApi } from "@/lib/api/endpoints/tag";
 import type { RoomType, RoomQuery } from "@/lib/api/types";
 import { InfiniteScroll } from "@/components/infinite-scroll";
 
+const BOOLEAN_OPTIONS = [
+  { value: "true", label: "Yes" },
+  { value: "false", label: "No" }
+];
+
 const filters: FilterConfig[] = [
   {
     key: "categories",
@@ -42,6 +47,24 @@ const filters: FilterConfig[] = [
     },
     useApiSearch: true,
     multi: true
+  },
+  {
+    key: "favourites",
+    label: "Favourites Only",
+    fetcher: async () => {
+      return BOOLEAN_OPTIONS;
+    },
+    useApiSearch: false,
+    multi: false
+  },
+  {
+    key: "mine",
+    label: "My Rooms",
+    fetcher: async () => {
+      return BOOLEAN_OPTIONS;
+    },
+    useApiSearch: false,
+    multi: false
   }
 ];
 
@@ -56,7 +79,9 @@ const Rooms = () => {
   const activeFilterCount = useMemo(() => {
     return (
       (selectedFilters.categories?.length ?? 0) +
-      (selectedFilters.tags?.length ?? 0)
+      (selectedFilters.tags?.length ?? 0) +
+      (selectedFilters.favourites?.length ?? 0) +
+      (selectedFilters.mine?.length ?? 0)
     );
   }, [selectedFilters]);
 
@@ -66,7 +91,13 @@ const Rooms = () => {
       categoryIds: selectedFilters.categories?.length
         ? selectedFilters.categories
         : undefined,
-      tagIds: selectedFilters.tags?.length ? selectedFilters.tags : undefined
+      tagIds: selectedFilters.tags?.length ? selectedFilters.tags : undefined,
+      favourited: selectedFilters.favourites?.length
+        ? selectedFilters.favourites[0] === "true"
+        : undefined,
+      mine: selectedFilters.mine?.length
+        ? selectedFilters.mine[0] === "true"
+        : undefined
     };
   }, [searchQuery, selectedFilters]);
 

@@ -16,12 +16,12 @@ export const otpSchema = z.object({
 export type OtpFormData = z.infer<typeof otpSchema>;
 
 export const signUpSchema = z.object({
-  firstName: z.string().min(1, "First name is required").trim(),
+  firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim(),
   email: z
     .email("Please enter a valid email address")
-    .min(1, "Email is required")
-    .trim(),
+    .trim()
+    .min(1, "Email is required"),
   profilePicture: z.string().optional()
 });
 

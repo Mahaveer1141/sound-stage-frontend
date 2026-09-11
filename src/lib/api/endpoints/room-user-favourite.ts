@@ -6,21 +6,11 @@ import type {
 } from "@/lib/api/types";
 
 export const roomUserFavouriteApi = {
-  list: (
-    page = 1,
-    perPage = 10
-  ): Promise<ApiPaginatedResponse<RoomType[]>> => {
-    return api.get<RoomType[], ApiPaginatedResponse<RoomType[]>>(
-      "/users/current/favorites",
-      { params: { page, perPage } }
-    );
+  add: (roomId: number): Promise<ApiBaseResponse<unknown>> => {
+    return api.post("/users/current/favorites", { roomId });
   },
 
-  add: (roomId: string): Promise<ApiBaseResponse<unknown>> => {
-    return api.post("/users/current/favorites", { roomId: Number(roomId) });
-  },
-
-  remove: (roomId: string): Promise<ApiBaseResponse<unknown>> => {
+  remove: (roomId: number): Promise<ApiBaseResponse<unknown>> => {
     return api.delete(`/users/current/favorites/${roomId}`);
   }
 } as const;
