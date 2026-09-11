@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Radio, Star } from "lucide-react";
+import { Users, Radio, Star, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import AudioWave from "./audio-wave";
@@ -11,12 +11,14 @@ import { roomUserFavouriteApi } from "@/lib/api/endpoints/room-user-favourite";
 import type {
   FileAttachmentType,
   CategoryType,
-  TagType
+  TagType,
+  RoomAccessType
 } from "@/lib/api/types";
 
 interface RoomCardProps {
   id: number;
   name: string;
+  type?: RoomAccessType;
   totalUsers?: number;
   liveUsers?: number;
   isFavourited?: boolean;
@@ -29,6 +31,7 @@ interface RoomCardProps {
 const RoomCard = ({
   id,
   name,
+  type,
   totalUsers,
   liveUsers,
   isFavourited: initialFavourited = false,
@@ -106,6 +109,14 @@ const RoomCard = ({
                   ) : (
                     <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 text-xs font-medium">
                       OFFLINE
+                    </span>
+                  )}
+                  {type === "private" && (
+                    <span
+                      title="Private room — invite code required"
+                      className="flex items-center p-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium"
+                    >
+                      <Lock className="w-2.5 h-2.5" />
                     </span>
                   )}
                 </div>

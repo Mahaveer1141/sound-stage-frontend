@@ -58,8 +58,29 @@ const filters: FilterConfig[] = [
     multi: false
   },
   {
+    key: "type",
+    label: "Room Type",
+    fetcher: async () => {
+      return [
+        { value: "public", label: "Public" },
+        { value: "private", label: "Private" }
+      ];
+    },
+    useApiSearch: false,
+    multi: false
+  },
+  {
     key: "mine",
     label: "My Rooms",
+    fetcher: async () => {
+      return BOOLEAN_OPTIONS;
+    },
+    useApiSearch: false,
+    multi: false
+  },
+  {
+    key: "joined",
+    label: "Joined",
     fetcher: async () => {
       return BOOLEAN_OPTIONS;
     },
@@ -81,7 +102,9 @@ const Rooms = () => {
       (selectedFilters.categories?.length ?? 0) +
       (selectedFilters.tags?.length ?? 0) +
       (selectedFilters.favourites?.length ?? 0) +
-      (selectedFilters.mine?.length ?? 0)
+      (selectedFilters.mine?.length ?? 0) +
+      (selectedFilters.joined?.length ?? 0) +
+      (selectedFilters.type?.length ?? 0)
     );
   }, [selectedFilters]);
 
@@ -97,7 +120,11 @@ const Rooms = () => {
         : undefined,
       mine: selectedFilters.mine?.length
         ? selectedFilters.mine[0] === "true"
-        : undefined
+        : undefined,
+      joined: selectedFilters.joined?.length
+        ? selectedFilters.joined[0] === "true"
+        : undefined,
+      type: selectedFilters.type?.length ? selectedFilters.type[0] : undefined
     };
   }, [searchQuery, selectedFilters]);
 
