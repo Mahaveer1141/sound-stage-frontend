@@ -10,12 +10,12 @@ import type { ApiPaginatedResponse, QueryParams } from "@/lib/api/types";
 interface InfiniteScrollProps<T> {
   fetcher: (
     page: number,
-    perPage: number,
+    pageSize: number,
     params?: QueryParams
   ) => Promise<ApiPaginatedResponse<T[]>>;
   params?: QueryParams;
   page?: number;
-  perPage?: number;
+  pageSize?: number;
   className?: string;
   onTotalCount?: (totalCount: number) => void;
   children: (item: T, index: number) => React.ReactNode;
@@ -25,7 +25,7 @@ export function InfiniteScroll<T>({
   fetcher,
   params,
   page = 1,
-  perPage = 10,
+  pageSize = 10,
   className = "space-y-4",
   onTotalCount,
   children
@@ -50,7 +50,7 @@ export function InfiniteScroll<T>({
       try {
         const res = await fetcherRef.current(
           pageToFetch,
-          perPage,
+          pageSize,
           paramsRef.current
         );
         setItems((prev) => {
@@ -67,7 +67,7 @@ export function InfiniteScroll<T>({
         setIsLoading(false);
       }
     },
-    [perPage, page]
+    [pageSize, page]
   );
 
   const serializedParams = JSON.stringify(params);

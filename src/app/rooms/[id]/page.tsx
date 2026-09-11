@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,6 @@ const Room = () => {
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
-  const joinAttemptedRef = useRef(false);
   const [room, setRoom] = useState<RoomType | null>(null);
   const [isRoomLoading, setIsRoomLoading] = useState(false);
   const [currentRoomUser, setCurrentRoomUser] = useState<RoomUserType | null>(
@@ -87,7 +86,8 @@ const Room = () => {
   } = useRoomUsers({
     roomId: id as string,
     roles: ["admin", "speaker", "moderator", "owner"],
-    perPage: 12,
+    isOnline: true,
+    perPage: 10,
     enabled: hasJoined
   });
   const {
@@ -98,7 +98,8 @@ const Room = () => {
   } = useRoomUsers({
     roomId: id as string,
     roles: ["listener"],
-    perPage: 24,
+    isOnline: true,
+    perPage: 20,
     enabled: hasJoined
   });
   const { isMuted, toggleMute, remoteStream } = useWebRTC({
@@ -112,11 +113,12 @@ const Room = () => {
     router.push("/rooms");
   };
 
-  const fetchRoom = async () => {
+  const fetchRoom = async (): Promise<RoomType | null> => {
     setIsRoomLoading(true);
     try {
       const res = await roomApi.show(id as string);
       setRoom(res.data);
+      return res.data;
     } catch (error) {
       toast.error(
         error instanceof ApiError ? error.message : "Failed to fetch room"
@@ -125,18 +127,21 @@ const Room = () => {
     } finally {
       setIsRoomLoading(false);
     }
+    return null;
   };
 
-  const fetchCurrentRoomUser = async () => {
+  const fetchCurrentRoomUser = async (): Promise<RoomUserType | null> => {
     setIsCurrentRoomUserLoading(true);
     try {
       const res = await roomApi.currentRoomUser(id as string);
       setCurrentRoomUser(res.data);
+      return res.data;
     } catch (err) {
       console.log(err);
     } finally {
       setIsCurrentRoomUserLoading(false);
     }
+    return null;
   };
 
   const updateUserRole = async (userId: number, role: RoomUserRole) => {
@@ -148,12 +153,12 @@ const Room = () => {
   };
 
   const joinRoom = async (privateCode = "") => {
-    if (!id || isJoining) return;
+    if (!id || isJoining || hasJoined) return;
 
     setIsJoining(true);
     try {
-      const res = await roomApi.join(id as string, privateCode);
-      setCurrentRoomUser(res.data);
+      await roomApi.join(id as string, privateCode);
+      await fetchCurrentRoomUser();
       setHasJoined(true);
       setIsJoinModalOpen(false);
       setJoinCode("");
@@ -167,22 +172,17 @@ const Room = () => {
   };
 
   useEffect(() => {
-    fetchRoom();
-    fetchCurrentRoomUser();
+    (async () => {
+      const room = await fetchRoom();
+      const currentUser = await fetchCurrentRoomUser();
+      if (room?.type === "private" && !currentUser) {
+        setIsJoinModalOpen(true);
+        return;
+      }
+
+      void joinRoom();
+    })();
   }, []);
-
-  useEffect(() => {
-    if (!room || isCurrentRoomUserLoading) return;
-
-    if (room.type === "private" && !currentRoomUser) {
-      setIsJoinModalOpen(true);
-      return;
-    }
-
-    if (currentRoomUser) {
-      joinRoom();
-    }
-  }, [isRoomLoading, isCurrentRoomUserLoading]);
 
   useEffect(() => {
     if (!hasJoined) return;

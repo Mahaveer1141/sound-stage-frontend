@@ -110,7 +110,7 @@ export function RoomForm({
 
   const fetchTags = useCallback(async (query: string) => {
     try {
-      const res = await tagApi.list({ query, perPage: 10 });
+      const res = await tagApi.list({ query, pageSize: 10 });
       return res.data;
     } catch {
       toast.error("Failed to load tags");

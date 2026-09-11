@@ -139,6 +139,7 @@ export interface RoomQuery extends Pagination, QueryParams {
 
 export interface RoomUsersQuery extends Pagination, QueryParams {
   roles?: RoomUserRole[];
+  isOnline?: boolean;
 }
 
 export interface TagQuery extends Pagination, QueryParams {

@@ -42,7 +42,7 @@ const filters: FilterConfig[] = [
     key: "tags",
     label: "Tags",
     fetcher: async (search) => {
-      const res = await tagApi.list({ query: search, perPage: 10 });
+      const res = await tagApi.list({ query: search, pageSize: 10 });
       return res.data.map((t) => ({ value: String(t.id), label: t.name }));
     },
     useApiSearch: true,
@@ -211,11 +211,11 @@ const Rooms = () => {
 
         <div>
           <InfiniteScroll<RoomType>
-            fetcher={(page, perPage, params) =>
-              roomApi.list({ ...params, page, perPage })
+            fetcher={(page, pageSize, params) =>
+              roomApi.list({ ...params, page, pageSize })
             }
             params={roomQuery}
-            perPage={10}
+            pageSize={10}
             onTotalCount={setTotalRooms}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >

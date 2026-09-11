@@ -6,6 +6,7 @@ import { toast } from "sonner";
 interface UseRoomUsersOptions {
   roomId: string;
   roles: RoomUserRole[];
+  isOnline?: boolean;
   perPage?: number;
   enabled?: boolean;
 }
@@ -13,6 +14,7 @@ interface UseRoomUsersOptions {
 export function useRoomUsers({
   roomId,
   roles,
+  isOnline,
   perPage = 20,
   enabled = true
 }: UseRoomUsersOptions) {
@@ -30,6 +32,7 @@ export function useRoomUsers({
       try {
         const res = await roomApi.usersList(roomId, {
           roles,
+          isOnline,
           page: targetPage,
           perPage
         });
@@ -43,7 +46,7 @@ export function useRoomUsers({
         setIsLoading(false);
       }
     },
-    [roomId, roles, perPage, enabled]
+    [roomId, roles, isOnline, perPage, enabled]
   );
 
   useEffect(() => {
