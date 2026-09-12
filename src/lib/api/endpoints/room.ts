@@ -8,6 +8,7 @@ import type {
   RoomUsersQuery,
   RoomUserRole,
   BlockedUsersQuery,
+  QueryParams,
   UserType
 } from "@/lib/api/types";
 
@@ -52,6 +53,17 @@ export const roomApi = {
   ): Promise<ApiPaginatedResponse<RoomUserType[]>> => {
     return api.get<RoomUserType[], ApiPaginatedResponse<RoomUserType[]>>(
       `/rooms/${id}/users`,
+      { params: query, signal }
+    );
+  },
+
+  raisedHandsList: (
+    id: string,
+    query?: QueryParams,
+    signal?: AbortSignal
+  ): Promise<ApiPaginatedResponse<RoomUserType[]>> => {
+    return api.get<RoomUserType[], ApiPaginatedResponse<RoomUserType[]>>(
+      `/rooms/${id}/users/raised-hands`,
       { params: query, signal }
     );
   },

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Crown, Filter, Search, Users } from "lucide-react";
+import { ArrowLeft, Filter, Search, Users } from "lucide-react";
 import FloatingOrbs from "@/components/floating-orbs";
 import Loader from "@/components/loader";
 import {
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
 import { roomApi } from "@/lib/api/endpoints/room";
-import { DEFAULT_USER_AVATAR } from "@/lib/constants";
+import { DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
 import { capitalize, cn } from "@/lib/utils";
 import { RoomUserRole, RoomUserType, UserType } from "@/lib/api/types";
 import { ALL_ROLES } from "@/lib/constants";
@@ -47,17 +47,13 @@ type Tab = "active" | "blocked";
 interface UserRowProps {
   user: UserType;
   subtitle: string;
-  isOwner?: boolean;
+  role?: RoomUserRole;
   isOnline?: boolean;
 }
 
-const UserRow = ({
-  user,
-  subtitle,
-  isOwner = false,
-  isOnline
-}: UserRowProps) => {
+const UserRow = ({ user, subtitle, role, isOnline }: UserRowProps) => {
   const avatar = user.profilePicture?.url || DEFAULT_USER_AVATAR;
+  const RoleIcon = role ? ROLE_ICONS[role] : undefined;
 
   return (
     <div className="flex items-center gap-3 py-3">
@@ -74,7 +70,7 @@ const UserRow = ({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate flex items-center gap-1.5">
           {user.fullName}
-          {isOwner && <Crown className="w-3.5 h-3.5 text-primary" />}
+          {RoleIcon && <RoleIcon className="w-3.5 h-3.5 text-primary" />}
         </p>
         <p className="text-xs text-muted-foreground capitalize">{subtitle}</p>
       </div>
@@ -264,7 +260,7 @@ const RoomUsers = () => {
                       key={roomUser.id}
                       user={roomUser.user}
                       subtitle={roomUser.role.name}
-                      isOwner={roomUser.isOwner}
+                      role={roomUser.role.name as RoomUserRole}
                       isOnline={roomUser.isOnline}
                     />
                   ))

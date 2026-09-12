@@ -18,6 +18,10 @@ interface InfiniteScrollProps<T> {
   page?: number;
   pageSize?: number;
   className?: string;
+  style?: React.CSSProperties;
+  useWindowScroll?: boolean;
+  loader?: React.ReactNode;
+  emptyPlaceholder?: React.ReactNode;
   onTotalCount?: (totalCount: number) => void;
   children: (item: T, index: number) => React.ReactNode;
 }
@@ -28,6 +32,10 @@ export function InfiniteScroll<T>({
   page = 1,
   pageSize = 10,
   className = "space-y-4",
+  style,
+  useWindowScroll = true,
+  loader,
+  emptyPlaceholder,
   onTotalCount,
   children
 }: InfiniteScrollProps<T>) {
@@ -89,13 +97,18 @@ export function InfiniteScroll<T>({
   );
 
   if (items.length === 0 && isLoading) {
-    return <Loader />;
+    return <>{loader ?? <Loader />}</>;
+  }
+
+  if (items.length === 0 && !hasMore) {
+    return <>{emptyPlaceholder}</>;
   }
 
   return (
     <VirtuosoGrid<T>
       data={items}
-      useWindowScroll
+      useWindowScroll={useWindowScroll}
+      style={style}
       endReached={loadMore}
       overscan={200}
       listClassName={className}

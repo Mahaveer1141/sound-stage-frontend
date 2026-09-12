@@ -39,6 +39,7 @@ import {
   InputOTPSlot
 } from "@/components/ui/input-otp";
 import Loader from "@/components/loader";
+import RaisedHandsDialog from "@/components/raised-hands-dialog";
 import {
   RoomType,
   RoomUserRole,
@@ -60,7 +61,9 @@ const Room = () => {
   const router = useRouter();
 
   const [isRaisingHand, setIsRaisingHand] = useState(false);
-  const [raisedHandsCount] = useState(0);
+  const [raisedHandsCount, setRaisedHandsCount] = useState(0);
+  const [isRaisedHandsOpen, setIsRaisedHandsOpen] = useState(false);
+  const [raisedHandsVersion, setRaisedHandsVersion] = useState(0);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
@@ -193,6 +196,24 @@ const Room = () => {
   }, [hasJoined]);
 
   useEffect(() => {
+    if (!hasJoined || !id) return;
+
+    const fetchRaisedHandsCount = async () => {
+      try {
+        const res = await roomApi.raisedHandsList(id as string, {
+          page: 1,
+          pageSize: 1
+        });
+        setRaisedHandsCount(res.pagination.totalCount);
+      } catch {
+        toast.error("Failed to fetch raised hands");
+      }
+    };
+
+    void fetchRaisedHandsCount();
+  }, [hasJoined]);
+
+  useEffect(() => {
     subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
       console.error("Ws Error: ", ws_error);
     });
@@ -213,6 +234,16 @@ const Room = () => {
         refetchListeners();
         refetchSpeakers();
         fetchCurrentRoomUser();
+      }
+    );
+
+    subscribe<{ userId: number; isHandRaised: boolean }>(
+      "set_hand_raised",
+      (state) => {
+        setRaisedHandsVersion((v) => v + 1);
+        setRaisedHandsCount((c) =>
+          Math.max(0, c + (state.isHandRaised ? 1 : -1))
+        );
       }
     );
 
@@ -344,11 +375,14 @@ const Room = () => {
               <Users className="w-5 h-5 text-muted-foreground" />
               Listeners
             </h2>
-            {currentRoomUser?.isAdmin && (
-              <Button variant="glass" size="sm" className="text-xs">
-                View Raised Hands ({raisedHandsCount})
-              </Button>
-            )}
+            <Button
+              variant="glass"
+              size="sm"
+              className="text-xs hover:cursor-pointer"
+              onClick={() => setIsRaisedHandsOpen(true)}
+            >
+              View Raised Hands ({raisedHandsCount})
+            </Button>
           </div>
 
           <div className="glass rounded-2xl p-6">
@@ -389,7 +423,11 @@ const Room = () => {
               <Button
                 variant={isRaisingHand ? "default" : "glass"}
                 size="icon"
-                onClick={() => setIsRaisingHand(!isRaisingHand)}
+                onClick={() => {
+                  const next = !isRaisingHand;
+                  setIsRaisingHand(next);
+                  send("set_hand_raised", { isHandRaised: next });
+                }}
                 className="w-12 h-12"
               >
                 <Hand
@@ -414,6 +452,20 @@ const Room = () => {
           </div>
         </div>
       </motion.div>
+
+      <RaisedHandsDialog
+        roomId={id as string}
+        raisedHandCount={raisedHandsCount}
+        currentRoomUser={currentRoomUser}
+        onPromote={(userId) => {
+          void updateUserRole(userId, "speaker");
+          setRaisedHandsVersion((v) => v + 1);
+        }}
+        open={isRaisedHandsOpen}
+        onOpenChange={setIsRaisedHandsOpen}
+        onTotalCount={setRaisedHandsCount}
+        refreshKey={raisedHandsVersion}
+      />
 
       <Dialog
         open={isJoinModalOpen}

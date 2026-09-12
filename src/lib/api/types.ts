@@ -167,4 +167,5 @@ export type EventType =
   | "webrtc_candidate"
   | "webrtc_add_track"
   | "user_role_updated"
+  | "set_hand_raised"
   | "error";

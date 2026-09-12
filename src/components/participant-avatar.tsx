@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Mic, MicOff, Crown, Hand, ChevronDown } from "lucide-react";
+import { Mic, MicOff, Hand, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { RoomUserRole, RoomUserType } from "@/lib/api/types";
-import { DEFAULT_USER_AVATAR } from "@/lib/constants";
+import { DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
 
 interface RoleAction {
   label: string;
@@ -71,6 +71,7 @@ const ParticipantAvatar = ({
   };
 
   const avatar = roomUser.user.profilePicture?.url || DEFAULT_USER_AVATAR;
+  const RoleIcon = ROLE_ICONS[roomUser.role.name as RoomUserRole];
   const isSpeaking = !isMuted;
 
   const canManageUser = () => {
@@ -138,9 +139,9 @@ const ParticipantAvatar = ({
         )}
       </div>
 
-      {roomUser?.isOwner && (
+      {RoleIcon && (
         <div className="absolute -top-1 -right-1 p-1 rounded-full bg-linear-to-r from-primary to-secondary">
-          <Crown className={cn("text-primary-foreground", iconSize[size])} />
+          <RoleIcon className={cn("text-primary-foreground", iconSize[size])} />
         </div>
       )}
 
