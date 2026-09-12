@@ -39,7 +39,8 @@ import {
   InputOTPSlot
 } from "@/components/ui/input-otp";
 import Loader from "@/components/loader";
-import RaisedHandsDialog from "@/components/raised-hands-dialog";
+import RaisedHandsDrawer from "@/components/raised-hands-drawer";
+import RoomUsersDrawer from "@/components/room-users-drawer";
 import {
   RoomType,
   RoomUserRole,
@@ -63,6 +64,7 @@ const Room = () => {
   const [isRaisingHand, setIsRaisingHand] = useState(false);
   const [raisedHandsCount, setRaisedHandsCount] = useState(0);
   const [isRaisedHandsOpen, setIsRaisedHandsOpen] = useState(false);
+  const [isUsersDrawerOpen, setIsUsersDrawerOpen] = useState(false);
   const [raisedHandsVersion, setRaisedHandsVersion] = useState(0);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -324,7 +326,7 @@ const Room = () => {
               variant="glass"
               size="xs"
               className="hover:cursor-pointer"
-              onClick={() => router.push(`/rooms/${id}/users`)}
+              onClick={() => setIsUsersDrawerOpen(true)}
             >
               View all ({room.totalUsers ?? speakerCount + listenerCount})
             </Button>
@@ -453,7 +455,14 @@ const Room = () => {
         </div>
       </motion.div>
 
-      <RaisedHandsDialog
+      <RoomUsersDrawer
+        roomId={id as string}
+        currentRoomUser={currentRoomUser}
+        open={isUsersDrawerOpen}
+        onOpenChange={setIsUsersDrawerOpen}
+      />
+
+      <RaisedHandsDrawer
         roomId={id as string}
         raisedHandCount={raisedHandsCount}
         currentRoomUser={currentRoomUser}
