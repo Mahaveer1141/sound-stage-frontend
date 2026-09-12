@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { RoomUserRole, RoomUserType } from "@/lib/api/types";
+import { DEFAULT_USER_AVATAR } from "@/lib/constants";
 
 interface RoleAction {
   label: string;
@@ -69,9 +70,7 @@ const ParticipantAvatar = ({
     lg: "w-5 h-5"
   };
 
-  const avatar =
-    roomUser.user.profilePicture?.url ||
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=alex";
+  const avatar = roomUser.user.profilePicture?.url || DEFAULT_USER_AVATAR;
   const isSpeaking = !isMuted;
 
   const canManageUser = () => {

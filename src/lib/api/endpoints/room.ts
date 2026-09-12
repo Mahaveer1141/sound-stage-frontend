@@ -6,7 +6,9 @@ import type {
   RoomUserType,
   RoomQuery,
   RoomUsersQuery,
-  RoomUserRole
+  RoomUserRole,
+  BlockedUsersQuery,
+  UserType
 } from "@/lib/api/types";
 
 export const roomApi = {
@@ -29,9 +31,13 @@ export const roomApi = {
     return api.post(`/rooms/${id}/users`, { privateCode: privateCode ?? "" });
   },
 
-  list: (query?: RoomQuery): Promise<ApiPaginatedResponse<RoomType[]>> => {
+  list: (
+    query?: RoomQuery,
+    signal?: AbortSignal
+  ): Promise<ApiPaginatedResponse<RoomType[]>> => {
     return api.get<RoomType[], ApiPaginatedResponse<RoomType[]>>(`/rooms`, {
-      params: query
+      params: query,
+      signal
     });
   },
 
@@ -41,11 +47,23 @@ export const roomApi = {
 
   usersList: (
     id: string,
-    query?: RoomUsersQuery
+    query?: RoomUsersQuery,
+    signal?: AbortSignal
   ): Promise<ApiPaginatedResponse<RoomUserType[]>> => {
     return api.get<RoomUserType[], ApiPaginatedResponse<RoomUserType[]>>(
       `/rooms/${id}/users`,
-      { params: query }
+      { params: query, signal }
+    );
+  },
+
+  blockedUsersList: (
+    id: string,
+    query?: BlockedUsersQuery,
+    signal?: AbortSignal
+  ): Promise<ApiPaginatedResponse<UserType[]>> => {
+    return api.get<UserType[], ApiPaginatedResponse<UserType[]>>(
+      `/rooms/${id}/blocks`,
+      { params: query, signal }
     );
   },
 

@@ -87,7 +87,7 @@ const Room = () => {
     roomId: id as string,
     roles: ["admin", "speaker", "moderator", "owner"],
     isOnline: true,
-    perPage: 10,
+    pageSize: 10,
     enabled: hasJoined
   });
   const {
@@ -99,7 +99,7 @@ const Room = () => {
     roomId: id as string,
     roles: ["listener"],
     isOnline: true,
-    perPage: 20,
+    pageSize: 20,
     enabled: hasJoined
   });
   const { isMuted, toggleMute, remoteStream } = useWebRTC({
@@ -289,6 +289,14 @@ const Room = () => {
               <Users className="w-4 h-4" />
               <span>{listenerCount} Listeners</span>
             </div>
+            <Button
+              variant="glass"
+              size="xs"
+              className="hover:cursor-pointer"
+              onClick={() => router.push(`/rooms/${id}/users`)}
+            >
+              View all ({room.totalUsers ?? speakerCount + listenerCount})
+            </Button>
           </div>
         </motion.div>
 

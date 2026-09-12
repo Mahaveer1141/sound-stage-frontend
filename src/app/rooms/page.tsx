@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import RoomCard from "@/components/room-card";
 import FloatingOrbs from "@/components/floating-orbs";
-import { FilterDropdown } from "@/components/filter-dropdown";
+import {
+  FilterDropdown,
+  countActiveFilters
+} from "@/components/filter-dropdown";
 import type { FilterConfig } from "@/components/filter-dropdown";
 import { Search, Plus, Filter } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -17,11 +20,7 @@ import { categoryApi } from "@/lib/api/endpoints/category";
 import { tagApi } from "@/lib/api/endpoints/tag";
 import type { RoomType, RoomQuery } from "@/lib/api/types";
 import { InfiniteScroll } from "@/components/infinite-scroll";
-
-const BOOLEAN_OPTIONS = [
-  { value: "true", label: "Yes" },
-  { value: "false", label: "No" }
-];
+import { BOOLEAN_OPTIONS } from "@/lib/constants";
 
 const filters: FilterConfig[] = [
   {
@@ -107,17 +106,7 @@ const Rooms = () => {
 
   const { isUserLoading } = useAuthGuard();
 
-  const activeFilterCount = useMemo(() => {
-    return (
-      (selectedFilters.categories?.length ?? 0) +
-      (selectedFilters.tags?.length ?? 0) +
-      (selectedFilters.favourites?.length ?? 0) +
-      (selectedFilters.mine?.length ?? 0) +
-      (selectedFilters.joined?.length ?? 0) +
-      (selectedFilters.live?.length ?? 0) +
-      (selectedFilters.type?.length ?? 0)
-    );
-  }, [selectedFilters]);
+  const activeFilterCount = countActiveFilters(selectedFilters);
 
   const roomQuery: RoomQuery = useMemo(() => {
     return {
@@ -211,8 +200,8 @@ const Rooms = () => {
 
         <div>
           <InfiniteScroll<RoomType>
-            fetcher={(page, pageSize, params) =>
-              roomApi.list({ ...params, page, pageSize })
+            fetcher={(page, pageSize, params, signal) =>
+              roomApi.list({ ...params, page, pageSize }, signal)
             }
             params={roomQuery}
             pageSize={10}

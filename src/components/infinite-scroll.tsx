@@ -11,7 +11,8 @@ interface InfiniteScrollProps<T> {
   fetcher: (
     page: number,
     pageSize: number,
-    params?: QueryParams
+    params?: QueryParams,
+    signal?: AbortSignal
   ) => Promise<ApiPaginatedResponse<T[]>>;
   params?: QueryParams;
   page?: number;
@@ -30,60 +31,52 @@ export function InfiniteScroll<T>({
   onTotalCount,
   children
 }: InfiniteScrollProps<T>) {
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
-
-  const paramsRef = useRef(params);
-  paramsRef.current = params;
-
-  const onTotalCountRef = useRef(onTotalCount);
-  onTotalCountRef.current = onTotalCount;
-
   const [items, setItems] = useState<T[]>([]);
   const [currentPage, setCurrentPage] = useState(page);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchItems = useCallback(
-    async (pageToFetch: number) => {
-      setIsLoading(true);
-      try {
-        const res = await fetcherRef.current(
-          pageToFetch,
-          pageSize,
-          paramsRef.current
-        );
-        setItems((prev) => {
-          const newItems =
-            pageToFetch === page ? res.data : [...prev, ...res.data];
-          return newItems;
-        });
-        setHasMore(pageToFetch < res.pagination.totalPages);
-        setCurrentPage(pageToFetch + 1);
-        onTotalCountRef.current?.(res.pagination.totalCount);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [pageSize, page]
-  );
-
+  const abortRef = useRef<AbortController | null>(null);
   const serializedParams = JSON.stringify(params);
+
+  const fetchItems = async (pageToFetch: number) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setIsLoading(true);
+    try {
+      const res = await fetcher(
+        pageToFetch,
+        pageSize,
+        params,
+        controller.signal
+      );
+      setItems((prev) =>
+        pageToFetch === page ? res.data : [...prev, ...res.data]
+      );
+      setHasMore(pageToFetch < res.pagination.totalPages);
+      setCurrentPage(pageToFetch + 1);
+      onTotalCount?.(res.pagination.totalCount);
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      toast.error(err instanceof Error ? err.message : "Failed to load");
+    } finally {
+      if (!controller.signal.aborted) setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     setItems([]);
     setCurrentPage(page);
     setHasMore(true);
     fetchItems(page);
-  }, [serializedParams, page, fetchItems]);
+    return () => abortRef.current?.abort();
+  }, [serializedParams, page]);
 
-  const loadMore = useCallback(() => {
-    if (hasMore && !isLoading) {
-      fetchItems(currentPage);
-    }
-  }, [hasMore, isLoading, currentPage, fetchItems]);
+  const loadMore = () => {
+    if (hasMore && !isLoading) fetchItems(currentPage);
+  };
 
   const Footer = useCallback(
     () =>

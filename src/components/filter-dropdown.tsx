@@ -32,6 +32,10 @@ export interface FilterConfig {
   multi?: boolean;
 }
 
+export function countActiveFilters(value: Record<string, string[]>): number {
+  return Object.values(value).reduce((sum, v) => sum + v.length, 0);
+}
+
 interface FilterDropdownProps {
   filters: FilterConfig[];
   value: Record<string, string[]>;

@@ -95,6 +95,9 @@ export interface RoomUserType {
   id: number;
   user: UserType;
   role: RoleType;
+  isOnline: boolean;
+  isMuted: boolean;
+  isHandRaised: boolean;
   isAdmin: boolean;
   canManage: boolean;
   canSpeak: boolean;
@@ -126,25 +129,29 @@ export type RoomUserRole =
 
 interface Pagination {
   page?: number;
-  perPage?: number;
+  pageSize?: number;
 }
 
-export interface RoomQuery extends Pagination, QueryParams {
+interface SearchQuery {
   query?: string;
+}
+
+export interface RoomQuery extends Pagination, SearchQuery, QueryParams {
   categoryIds?: string[];
   tagIds?: string[];
   joined?: boolean;
   live?: boolean;
 }
 
-export interface RoomUsersQuery extends Pagination, QueryParams {
+export interface RoomUsersQuery extends Pagination, SearchQuery, QueryParams {
   roles?: RoomUserRole[];
   isOnline?: boolean;
 }
 
-export interface TagQuery extends Pagination, QueryParams {
-  query?: string;
-}
+export interface BlockedUsersQuery
+  extends Pagination, SearchQuery, QueryParams {}
+
+export interface TagQuery extends Pagination, SearchQuery, QueryParams {}
 
 export type WsMessageHandler<T> = (data: T) => void;
 export type WsEventHandler = () => void;
