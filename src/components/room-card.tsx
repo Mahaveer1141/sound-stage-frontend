@@ -4,6 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { Users, Radio, Star, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -114,12 +119,16 @@ const RoomCard = ({
                     </span>
                   )}
                   {type === "private" && (
-                    <span
-                      title="Private room — invite code required"
-                      className="flex items-center p-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium"
-                    >
-                      <Lock className="w-2.5 h-2.5" />
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex items-center p-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+                          <Lock className="w-2.5 h-2.5" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Private room — invite code required
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
                 <h3 className="text-lg font-semibold text-foreground group-hover:gradient-text transition-all duration-300 line-clamp-2">
@@ -127,25 +136,33 @@ const RoomCard = ({
                 </h3>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isToggling}
-                  onClick={handleFavourite}
-                  aria-pressed={isFavourited}
-                  title={
-                    isFavourited ? "Remove from favorites" : "Add to favorites"
-                  }
-                  className={`p-1.5 rounded-full hover:bg-muted hover:cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
-                    isToggling ? "opacity-50" : ""
-                  }`}
-                >
-                  <Star
-                    className={`w-5 h-5 ${
-                      isFavourited ? "text-yellow-400" : "text-muted-foreground"
-                    }`}
-                    fill={isFavourited ? "currentColor" : "none"}
-                  />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isToggling}
+                      onClick={handleFavourite}
+                      aria-pressed={isFavourited}
+                      className={`p-1.5 rounded-full hover:bg-muted hover:cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
+                        isToggling ? "opacity-50" : ""
+                      }`}
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          isFavourited
+                            ? "text-yellow-400"
+                            : "text-muted-foreground"
+                        }`}
+                        fill={isFavourited ? "currentColor" : "none"}
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isFavourited
+                      ? "Remove from favorites"
+                      : "Add to favorites"}
+                  </TooltipContent>
+                </Tooltip>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                   <AudioWave isActive={isLive} size="sm" />
                 </div>
@@ -155,13 +172,16 @@ const RoomCard = ({
             {categories && categories.length > 0 && (
               <div className="flex items-center gap-2 pt-2 mb-5">
                 {categories.map((category) => (
-                  <span
-                    title={category.description}
-                    key={category.id}
-                    className="px-2 py-1 rounded-full bg-primary/10 text-xs text-primary"
-                  >
-                    {category.name}
-                  </span>
+                  <Tooltip key={category.id}>
+                    <TooltipTrigger asChild>
+                      <span className="px-2 py-1 rounded-full bg-primary/10 text-xs text-primary">
+                        {category.name}
+                      </span>
+                    </TooltipTrigger>
+                    {category.description && (
+                      <TooltipContent>{category.description}</TooltipContent>
+                    )}
+                  </Tooltip>
                 ))}
               </div>
             )}
@@ -180,20 +200,28 @@ const RoomCard = ({
             )}
 
             <div className="flex items-center gap-4 pt-3 border-t border-border/50">
-              <div
-                className="flex items-center gap-1.5 text-sm text-muted-foreground"
-                title={`Users in Room: ${totalUsers ?? 0}`}
-              >
-                <Users className="w-4 h-4" />
-                <span>{totalUsers ?? 0}</span>
-              </div>
-              <div
-                className="flex items-center gap-1.5 text-sm text-muted-foreground"
-                title={`Live users in Room: ${liveUsers ?? 0}`}
-              >
-                <Radio className="w-4 h-4 text-emerald-400" />
-                <span>{liveUsers ?? 0}</span>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Users className="w-4 h-4" />
+                    <span>{totalUsers ?? 0}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Users in Room: {totalUsers ?? 0}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Radio className="w-4 h-4 text-emerald-400" />
+                    <span>{liveUsers ?? 0}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Live users in Room: {liveUsers ?? 0}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </CardContent>
         </Card>

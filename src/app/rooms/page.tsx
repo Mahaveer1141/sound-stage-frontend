@@ -136,7 +136,7 @@ const Rooms = () => {
   }
 
   const filterTrigger = (
-    <Button variant="glass" className="gap-2 sm:w-auto">
+    <Button variant="glass" className="gap-2 sm:w-auto hover:cursor-pointer">
       <Filter className="w-4 h-4" />
       Filters
       {activeFilterCount > 0 && (

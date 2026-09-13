@@ -15,6 +15,11 @@ import {
   FormMessage
 } from "@/components/ui/form";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -132,14 +137,18 @@ export function ProfileForm({
                   <Camera className="w-4 h-4 text-primary-foreground" />
                 </div>
                 {profilePhoto && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleRemovePhoto(e)}
-                    title="Remove photo"
-                    className="absolute top-0 right-0 w-6 h-6 bg-destructive rounded-full flex items-center justify-center shadow-lg hover:bg-destructive/90 transition-colors"
-                  >
-                    <X className="w-3 h-3 text-destructive-foreground" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemovePhoto(e)}
+                        className="absolute top-0 right-0 w-6 h-6 bg-destructive rounded-full flex items-center justify-center shadow-lg hover:bg-destructive/90 transition-colors"
+                      >
+                        <X className="w-3 h-3 text-destructive-foreground" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Remove photo</TooltipContent>
+                  </Tooltip>
                 )}
                 <input
                   ref={fileInputRef}

@@ -12,6 +12,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious
+} from "@/components/ui/pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -195,7 +203,7 @@ const RoomUsersDrawer = ({
   const onNextPage = activeTab === "active" ? nextPage : nextBlockedPage;
 
   const filterTrigger = (
-    <Button variant="glass" className="gap-2">
+    <Button variant="glass" className="gap-2 hover:cursor-pointer">
       <Filter className="w-4 h-4" />
       {activeFilterCount > 0 && (
         <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
@@ -231,57 +239,56 @@ const RoomUsersDrawer = ({
           </DrawerClose>
         </DrawerHeader>
 
-        <div className="flex gap-6 px-6 border-b border-border/50">
-          <button
-            onClick={() => setActiveTab("active")}
-            className={cn(
-              "py-3 text-sm font-medium border-b-2 transition-colors hover:cursor-pointer -mb-px",
-              activeTab === "active"
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Active ({count})
-          </button>
-          {currentRoomUser?.isAdmin && (
-            <button
-              onClick={() => setActiveTab("blocked")}
-              className={cn(
-                "py-3 text-sm font-medium border-b-2 transition-colors hover:cursor-pointer -mb-px",
-                activeTab === "blocked"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as Tab)}
+          className="flex-1 min-h-0 gap-0"
+        >
+          <div className="px-6 border-b border-border/50">
+            <TabsList variant="line" className="w-full justify-start gap-6 p-0">
+              <TabsTrigger
+                value="active"
+                className="flex-none hover:cursor-pointer"
+              >
+                Active ({count})
+              </TabsTrigger>
+              {currentRoomUser?.isAdmin && (
+                <TabsTrigger
+                  value="blocked"
+                  className="flex-none hover:cursor-pointer"
+                >
+                  Blocked ({blockedCount})
+                </TabsTrigger>
               )}
-            >
-              Blocked ({blockedCount})
-            </button>
-          )}
-        </div>
-
-        <div className="flex gap-2 px-6 py-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground z-10 pointer-events-none" />
-            <Input
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 glass border-border/50 focus:border-primary"
-            />
+            </TabsList>
           </div>
-          {activeTab === "active" && (
-            <FilterDropdown
-              filters={USER_FILTERS}
-              value={selectedFilters}
-              onChange={setSelectedFilters}
-              trigger={filterTrigger}
-            />
-          )}
-        </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-          <div className="divide-y divide-border/50">
-            {activeTab === "active" ? (
-              isLoading ? (
+          <div className="flex gap-2 px-6 py-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground z-10 pointer-events-none" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 glass border-border/50 focus:border-primary"
+              />
+            </div>
+            {activeTab === "active" && (
+              <FilterDropdown
+                filters={USER_FILTERS}
+                value={selectedFilters}
+                onChange={setSelectedFilters}
+                trigger={filterTrigger}
+              />
+            )}
+          </div>
+
+          <TabsContent
+            value="active"
+            className="flex-1 min-h-0 overflow-y-auto px-6 pb-6"
+          >
+            <div className="divide-y divide-border/50">
+              {isLoading ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   Loading...
                 </p>
@@ -308,61 +315,77 @@ const RoomUsersDrawer = ({
                     }
                   />
                 ))
-              )
-            ) : isBlockedLoading ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Loading...
-              </p>
-            ) : blockedUsers.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No blocked users
-              </p>
-            ) : (
-              blockedUsers.map((user) => (
-                <UserRow
-                  key={user.id}
-                  user={user}
-                  subtitle="Blocked"
-                  actions={
-                    <Button
-                      variant="glass"
-                      size="xs"
-                      className="hover:cursor-pointer shrink-0"
-                      onClick={() => handleUnblock(user.id)}
-                    >
-                      Unblock
-                    </Button>
-                  }
-                />
-              ))
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="blocked"
+            className="flex-1 min-h-0 overflow-y-auto px-6 pb-6"
+          >
+            <div className="divide-y divide-border/50">
+              {isBlockedLoading ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Loading...
+                </p>
+              ) : blockedUsers.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No blocked users
+                </p>
+              ) : (
+                blockedUsers.map((user) => (
+                  <UserRow
+                    key={user.id}
+                    user={user}
+                    subtitle="Blocked"
+                    actions={
+                      <Button
+                        variant="glass"
+                        size="xs"
+                        className="hover:cursor-pointer shrink-0"
+                        onClick={() => handleUnblock(user.id)}
+                      >
+                        Unblock
+                      </Button>
+                    }
+                  />
+                ))
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {currentTotalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 shrink-0">
-            <Button
-              variant="glass"
-              size="sm"
-              className="hover:cursor-pointer"
-              disabled={currentPage <= 1}
-              onClick={onPrevPage}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {currentPage} of {currentTotalPages}
-            </span>
-            <Button
-              variant="glass"
-              size="sm"
-              className="hover:cursor-pointer"
-              disabled={currentPage >= currentTotalPages}
-              onClick={onNextPage}
-            >
-              Next
-            </Button>
-          </div>
+          <Pagination className="px-6 py-4 border-t border-border/50 shrink-0">
+            <PaginationContent className="w-full justify-between">
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={onPrevPage}
+                  aria-disabled={currentPage <= 1}
+                  className={cn(
+                    "hover:cursor-pointer",
+                    currentPage <= 1 && "pointer-events-none opacity-50"
+                  )}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="text-sm text-muted-foreground px-2">
+                  Page {currentPage} of {currentTotalPages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  onClick={onNextPage}
+                  aria-disabled={currentPage >= currentTotalPages}
+                  className={cn(
+                    "hover:cursor-pointer",
+                    currentPage >= currentTotalPages &&
+                      "pointer-events-none opacity-50"
+                  )}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         )}
       </DrawerContent>
     </Drawer>

@@ -27,6 +27,11 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { MultiDropdownFormField } from "@/components/multi-dropdown-form-field";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { roomFormSchema, RoomFormData } from "@/lib/validations/room";
 import { categoryApi } from "@/lib/api/endpoints/category";
 import { tagApi } from "@/lib/api/endpoints/tag";
@@ -357,32 +362,43 @@ export function RoomForm({
               <code className="flex-1 font-mono text-lg tracking-widest">
                 {privateCode}
               </code>
-              <Button
-                type="button"
-                variant="glass"
-                size="icon"
-                title="Copy private code"
-                disabled={!privateCode}
-                onClick={copyPrivateCode}
-              >
-                {isCodeCopied ? (
-                  <Check className="w-4 h-4 text-green-500" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="glass"
-                size="icon"
-                title="Regenerate private code"
-                disabled={isCodeRefreshing}
-                onClick={refreshPrivateCode}
-              >
-                <RefreshCw
-                  className={cn("w-4 h-4", isCodeRefreshing && "animate-spin")}
-                />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="glass"
+                    size="icon"
+                    disabled={!privateCode}
+                    onClick={copyPrivateCode}
+                  >
+                    {isCodeCopied ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy private code</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="glass"
+                    size="icon"
+                    disabled={isCodeRefreshing}
+                    onClick={refreshPrivateCode}
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "w-4 h-4",
+                        isCodeRefreshing && "animate-spin"
+                      )}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Regenerate private code</TooltipContent>
+              </Tooltip>
             </div>
             <p className="text-muted-foreground text-sm">
               Share this code to let listeners join your private room.

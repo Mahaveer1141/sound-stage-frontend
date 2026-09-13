@@ -16,6 +16,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 export interface FilterOption {
   value: string;
@@ -153,20 +158,24 @@ export function FilterDropdown({
                   <span className="text-xs bg-white h-5 w-5 flex items-center justify-center text-black rounded-full">
                     {value[filter.key].length}
                   </span>
-                  <button
-                    type="button"
-                    title={`Clear ${filter.label}`}
-                    aria-label={`Clear ${filter.label}`}
-                    className="h-5 w-5 hover:cursor-pointer flex items-center justify-center rounded-full text-muted-foreground"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      clearFilter(filter.key);
-                    }}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={`Clear ${filter.label}`}
+                        className="h-5 w-5 hover:cursor-pointer flex items-center justify-center rounded-full text-muted-foreground"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          clearFilter(filter.key);
+                        }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{`Clear ${filter.label}`}</TooltipContent>
+                  </Tooltip>
                 </span>
               ) : null}
             </DropdownMenuSubTrigger>
@@ -203,7 +212,6 @@ export function FilterDropdown({
                       <DropdownMenuCheckboxItem
                         key={option.value}
                         className="cursor-pointer"
-                        title={option.description}
                         checked={(value[filter.key] ?? []).includes(
                           option.value
                         )}
@@ -212,7 +220,18 @@ export function FilterDropdown({
                           setMultiValue(filter.key, option.value)
                         }
                       >
-                        {option.label}
+                        {option.description ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex-1">{option.label}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              {option.description}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          option.label
+                        )}
                       </DropdownMenuCheckboxItem>
                     ))
                   ) : (
@@ -224,11 +243,21 @@ export function FilterDropdown({
                         <DropdownMenuRadioItem
                           key={option.value}
                           className="cursor-pointer"
-                          title={option.description}
                           value={option.value}
                           onSelect={(e) => e.preventDefault()}
                         >
-                          {option.label}
+                          {option.description ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="flex-1">{option.label}</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                {option.description}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            option.label
+                          )}
                         </DropdownMenuRadioItem>
                       ))}
                     </DropdownMenuRadioGroup>
