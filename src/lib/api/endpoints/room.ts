@@ -9,7 +9,9 @@ import type {
   RoomUserRole,
   BlockedUsersQuery,
   QueryParams,
-  UserType
+  UserType,
+  ChatMessageType,
+  ChatMessageQuery
 } from "@/lib/api/types";
 
 export const roomApi = {
@@ -77,6 +79,34 @@ export const roomApi = {
       `/rooms/${id}/blocks`,
       { params: query, signal }
     );
+  },
+
+  messages: (
+    id: string,
+    query?: ChatMessageQuery,
+    signal?: AbortSignal
+  ): Promise<ApiPaginatedResponse<ChatMessageType[]>> => {
+    return api.get<ChatMessageType[], ApiPaginatedResponse<ChatMessageType[]>>(
+      `/rooms/${id}/messages`,
+      { params: query, signal }
+    );
+  },
+
+  createMessage: (
+    roomId: string,
+    input: { content: string; isPinned?: boolean }
+  ): Promise<ApiBaseResponse<ChatMessageType>> => {
+    return api.post(`/rooms/${roomId}/messages`, input);
+  },
+
+  setMessagePinned: (
+    roomId: string,
+    messageId: number,
+    isPinned: boolean
+  ): Promise<ApiBaseResponse<ChatMessageType>> => {
+    return api.patch(`/rooms/${roomId}/messages/${messageId}/pin`, {
+      isPinned
+    });
   },
 
   currentRoomUser: (roomId: string): Promise<ApiBaseResponse<RoomUserType>> => {

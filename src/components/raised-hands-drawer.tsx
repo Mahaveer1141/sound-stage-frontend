@@ -15,28 +15,34 @@ import { Spinner } from "@/components/ui/spinner";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
 import type { RoomUserRole, RoomUserType } from "@/lib/api/types";
+import useRoomStore from "@/store/useRoomStore";
+import { useShallow } from "zustand/react/shallow";
 
 interface RaisedHandsDrawerProps {
   roomId: string;
-  open: boolean;
-  raisedHandCount: number;
-  currentRoomUser: RoomUserType | null;
-  onPromote: (userId: number) => void;
-  onOpenChange: (open: boolean) => void;
-  onTotalCount?: (count: number) => void;
-  refreshKey?: number;
 }
 
-const RaisedHandsDrawer = ({
-  roomId,
-  open,
-  raisedHandCount,
-  currentRoomUser,
-  onPromote,
-  onOpenChange,
-  onTotalCount,
-  refreshKey
-}: RaisedHandsDrawerProps) => {
+const RaisedHandsDrawer = ({ roomId }: RaisedHandsDrawerProps) => {
+  const {
+    isRaisedHandsOpen: open,
+    setRaisedHandsOpen: onOpenChange,
+    raisedHandsCount: raisedHandCount,
+    raisedHandsVersion: refreshKey,
+    currentRoomUser,
+    promoteToSpeaker,
+    setRaisedHandsCount
+  } = useRoomStore(
+    useShallow((s) => ({
+      isRaisedHandsOpen: s.isRaisedHandsOpen,
+      setRaisedHandsOpen: s.setRaisedHandsOpen,
+      raisedHandsCount: s.raisedHandsCount,
+      raisedHandsVersion: s.raisedHandsVersion,
+      currentRoomUser: s.currentRoomUser,
+      promoteToSpeaker: s.promoteToSpeaker,
+      setRaisedHandsCount: s.setRaisedHandsCount
+    }))
+  );
+
   return (
     <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="glass border-l border-border/50 data-[vaul-drawer-direction=right]:w-1/2 data-[vaul-drawer-direction=right]:min-w-75 data-[vaul-drawer-direction=right]:sm:max-w-none">
@@ -66,7 +72,7 @@ const RaisedHandsDrawer = ({
             useWindowScroll={false}
             style={{ height: "100%" }}
             className="divide-y divide-border/50"
-            onTotalCount={onTotalCount}
+            onTotalCount={setRaisedHandsCount}
             loader={
               <div className="flex justify-center py-16">
                 <Spinner className="size-8" />
@@ -111,7 +117,9 @@ const RaisedHandsDrawer = ({
                         variant="glow"
                         size="xs"
                         className="hover:cursor-pointer shrink-0"
-                        onClick={() => onPromote(roomUser.user.id)}
+                        onClick={() =>
+                          promoteToSpeaker(roomId, roomUser.user.id)
+                        }
                       >
                         Invite to Speak
                       </Button>

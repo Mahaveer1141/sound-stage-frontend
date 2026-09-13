@@ -1,6 +1,7 @@
 "use client";
 
 import useAuthStore from "@/store/useAuthStore";
+import { useShallow } from "zustand/react/shallow";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,7 +10,13 @@ export const AUTH_ROUTES = ["/auth", "/auth/sign_up"];
 export const DEFAULT_AUTHENTICATED_ROUTE = "/rooms";
 
 export function useAuthGuard() {
-  const { user, isLoading, refreshUser } = useAuthStore();
+  const { user, isLoading, refreshUser } = useAuthStore(
+    useShallow((s) => ({
+      user: s.user,
+      isLoading: s.isLoading,
+      refreshUser: s.refreshUser
+    }))
+  );
   const router = useRouter();
   const path = usePathname();
 

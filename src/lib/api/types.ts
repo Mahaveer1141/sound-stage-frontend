@@ -66,6 +66,14 @@ export interface TagType {
   name: string;
 }
 
+export interface ChatMessageType {
+  id: number;
+  content: string;
+  isPinned: boolean;
+  createdAt: string;
+  user?: UserType;
+}
+
 export type RoomAccessType = "public" | "private";
 
 export interface RoomType {
@@ -154,6 +162,10 @@ export interface RoomUsersQuery
   isOnline?: boolean;
 }
 
+export interface ChatMessageQuery extends Pagination, QueryParams {
+  isPinned?: boolean;
+}
+
 export interface BlockedUsersQuery
   extends Pagination, SearchQuery, QueryParams {}
 
@@ -174,4 +186,5 @@ export type EventType =
   | "webrtc_add_track"
   | "user_role_updated"
   | "set_hand_raised"
+  | "chat_message"
   | "error";

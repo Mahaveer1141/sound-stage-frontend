@@ -1,20 +1,28 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { EventType, ws, WsMessageHandler, WsEventHandler } from "@/lib/api";
+import useConnectionStore from "@/store/useConnectionStore";
+import { useShallow } from "zustand/react/shallow";
 
 export function useWebSocket(path: string, enabled = true) {
   const unsubscribesRef = useRef<Array<() => void>>([]);
-  const [isConnected, setIsConnected] = useState(ws.isConnected());
+  const { isConnected, setConnected } = useConnectionStore(
+    useShallow((s) => ({
+      isConnected: s.isConnected,
+      setConnected: s.setConnected
+    }))
+  );
 
   useEffect(() => {
     if (!enabled) return;
 
+    setConnected(ws.isConnected());
     (async () => {
       if (!ws.isConnected()) {
         await ws.connect(path).catch(console.error);
       }
     })();
-    const unsubscribeConnect = ws.onConnect(() => setIsConnected(true));
-    const unsubscribeDisconnect = ws.onDisconnect(() => setIsConnected(false));
+    const unsubscribeConnect = ws.onConnect(() => setConnected(true));
+    const unsubscribeDisconnect = ws.onDisconnect(() => setConnected(false));
 
     return () => {
       unsubscribeConnect();
@@ -22,7 +30,7 @@ export function useWebSocket(path: string, enabled = true) {
       unsubscribesRef.current.forEach((unsubscribe) => unsubscribe());
       unsubscribesRef.current = [];
     };
-  }, [enabled]);
+  }, [enabled, path]);
 
   const subscribe = useCallback(
     <T>(eventType: EventType, handler: WsMessageHandler<T>): (() => void) => {

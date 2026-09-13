@@ -12,6 +12,7 @@ import {
   MicOff,
   Hand,
   LogOut,
+  MessageSquare,
   MoreHorizontal,
   Users,
   Share2,
@@ -24,7 +25,6 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { ApiError } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -41,18 +41,15 @@ import {
 import Loader from "@/components/loader";
 import RaisedHandsDrawer from "@/components/raised-hands-drawer";
 import RoomUsersDrawer from "@/components/room-users-drawer";
-import {
-  RoomType,
-  RoomUserRole,
-  RoomUserType,
-  WsErrorPayloadType
-} from "@/lib/api/types";
-import { roomApi } from "@/lib/api/endpoints/room";
-import { toast } from "sonner";
+import ChatPanel from "@/components/chat-panel";
+import { RoomUserRole, WsErrorPayloadType } from "@/lib/api/types";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import RemoteAudio from "@/components/remote-audio";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
+import useRoomStore from "@/store/useRoomStore";
+import useConnectionStore from "@/store/useConnectionStore";
+import { useShallow } from "zustand/react/shallow";
 
 const Room = () => {
   const { isUserLoading } = useAuthGuard();
@@ -61,22 +58,49 @@ const Room = () => {
 
   const router = useRouter();
 
-  const [isRaisingHand, setIsRaisingHand] = useState(false);
-  const [raisedHandsCount, setRaisedHandsCount] = useState(0);
-  const [isRaisedHandsOpen, setIsRaisedHandsOpen] = useState(false);
-  const [isUsersDrawerOpen, setIsUsersDrawerOpen] = useState(false);
-  const [raisedHandsVersion, setRaisedHandsVersion] = useState(0);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [room, setRoom] = useState<RoomType | null>(null);
-  const [isRoomLoading, setIsRoomLoading] = useState(false);
-  const [currentRoomUser, setCurrentRoomUser] = useState<RoomUserType | null>(
-    null
+
+  const {
+    room,
+    currentRoomUser,
+    hasJoined,
+    isRoomLoading,
+    isCurrentRoomUserLoading,
+    isRaisingHand,
+    raisedHandsCount,
+    fetchRoom,
+    fetchCurrentRoomUser,
+    fetchRaisedHandsCount,
+    joinRoom,
+    setRaisingHand,
+    applyHandRaisedEvent,
+    setRaisedHandsOpen,
+    setUsersDrawerOpen,
+    setChatOpen,
+    reset
+  } = useRoomStore(
+    useShallow((s) => ({
+      room: s.room,
+      currentRoomUser: s.currentRoomUser,
+      hasJoined: s.hasJoined,
+      isRoomLoading: s.isRoomLoading,
+      isCurrentRoomUserLoading: s.isCurrentRoomUserLoading,
+      isRaisingHand: s.isRaisingHand,
+      raisedHandsCount: s.raisedHandsCount,
+      fetchRoom: s.fetchRoom,
+      fetchCurrentRoomUser: s.fetchCurrentRoomUser,
+      fetchRaisedHandsCount: s.fetchRaisedHandsCount,
+      joinRoom: s.joinRoom,
+      setRaisingHand: s.setRaisingHand,
+      applyHandRaisedEvent: s.applyHandRaisedEvent,
+      setRaisedHandsOpen: s.setRaisedHandsOpen,
+      setUsersDrawerOpen: s.setUsersDrawerOpen,
+      setChatOpen: s.setChatOpen,
+      reset: s.reset
+    }))
   );
-  const [isCurrentRoomUserLoading, setIsCurrentRoomUserLoading] =
-    useState(false);
 
   const { onConnect, subscribe, send, isConnected } = useWebSocket(
     `/ws/rooms/${id}`,
@@ -118,78 +142,38 @@ const Room = () => {
     router.push("/rooms");
   };
 
-  const fetchRoom = async (): Promise<RoomType | null> => {
-    setIsRoomLoading(true);
-    try {
-      const res = await roomApi.show(id as string);
-      setRoom(res.data);
-      return res.data;
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : "Failed to fetch room"
-      );
-      router.push("/rooms");
-    } finally {
-      setIsRoomLoading(false);
-    }
-    return null;
-  };
-
-  const fetchCurrentRoomUser = async (
-    silent = false
-  ): Promise<RoomUserType | null> => {
-    if (!silent) setIsCurrentRoomUserLoading(true);
-    try {
-      const res = await roomApi.currentRoomUser(id as string);
-      setCurrentRoomUser(res.data);
-      return res.data;
-    } catch (err) {
-      console.log(err);
-    } finally {
-      if (!silent) setIsCurrentRoomUserLoading(false);
-    }
-    return null;
-  };
-
-  const updateUserRole = async (userId: number, role: RoomUserRole) => {
-    try {
-      await roomApi.updateUserRole(id as string, userId, role);
-    } catch (_) {
-      toast.error("Failed to update user role");
-    }
-  };
-
-  const joinRoom = async (privateCode = "") => {
+  const handleJoinRoom = async (privateCode = "") => {
     if (!id || isJoining || hasJoined) return;
 
     setIsJoining(true);
-    try {
-      await roomApi.join(id as string, privateCode);
-      await fetchCurrentRoomUser();
-      setHasJoined(true);
+    const joined = await joinRoom(id as string, privateCode);
+    setIsJoining(false);
+
+    if (joined) {
       setIsJoinModalOpen(false);
       setJoinCode("");
-    } catch (error) {
-      const message =
-        error instanceof ApiError ? error.message : "Failed to join room";
-      toast.error(message);
-    } finally {
-      setIsJoining(false);
     }
   };
 
   useEffect(() => {
     (async () => {
-      const room = await fetchRoom();
-      const currentUser = await fetchCurrentRoomUser();
-      if (room?.type === "private" && !currentUser) {
+      const room = await fetchRoom(id as string);
+      if (!room) {
+        router.push("/rooms");
+        return;
+      }
+
+      const currentUser = await fetchCurrentRoomUser(id as string);
+      if (room.type === "private" && !currentUser) {
         setIsJoinModalOpen(true);
         return;
       }
 
-      void joinRoom();
+      void joinRoom(id as string);
     })();
-  }, []);
+
+    return () => reset();
+  }, [id]);
 
   useEffect(() => {
     if (!hasJoined) return;
@@ -202,20 +186,8 @@ const Room = () => {
   useEffect(() => {
     if (!hasJoined || !id) return;
 
-    const fetchRaisedHandsCount = async () => {
-      try {
-        const res = await roomApi.raisedHandsList(id as string, {
-          page: 1,
-          pageSize: 1
-        });
-        setRaisedHandsCount(res.pagination.totalCount);
-      } catch {
-        toast.error("Failed to fetch raised hands");
-      }
-    };
-
-    void fetchRaisedHandsCount();
-  }, [hasJoined]);
+    void fetchRaisedHandsCount(id as string);
+  }, [hasJoined, id]);
 
   useEffect(() => {
     subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
@@ -237,22 +209,19 @@ const Room = () => {
       (_) => {
         refetchListeners();
         refetchSpeakers();
-        fetchCurrentRoomUser(true);
+        fetchCurrentRoomUser(id as string, true);
       }
     );
 
     subscribe<{ userId: number; isHandRaised: boolean }>(
       "set_hand_raised",
       (state) => {
-        setRaisedHandsVersion((v) => v + 1);
-        setRaisedHandsCount((c) =>
-          Math.max(0, c + (state.isHandRaised ? 1 : -1))
-        );
+        applyHandRaisedEvent(state.isHandRaised);
       }
     );
 
     return () => {
-      if (!isConnected) return;
+      if (!useConnectionStore.getState().isConnected) return;
       send("leave_room", {});
     };
   }, []);
@@ -328,7 +297,7 @@ const Room = () => {
               variant="glass"
               size="xs"
               className="hover:cursor-pointer"
-              onClick={() => setIsUsersDrawerOpen(true)}
+              onClick={() => setUsersDrawerOpen(true)}
             >
               View all ({room.totalUsers ?? speakerCount + listenerCount})
             </Button>
@@ -357,7 +326,11 @@ const Room = () => {
                 <ParticipantAvatar
                   key={speaker.id}
                   roomUser={speaker}
-                  isMuted={false}
+                  isMuted={
+                    speaker.user.id === currentRoomUser?.user.id
+                      ? isMuted
+                      : false
+                  }
                   size="lg"
                 />
               ))}
@@ -379,7 +352,7 @@ const Room = () => {
               variant="glass"
               size="sm"
               className="text-xs hover:cursor-pointer"
-              onClick={() => setIsRaisedHandsOpen(true)}
+              onClick={() => setRaisedHandsOpen(true)}
             >
               View Raised Hands ({raisedHandsCount})
             </Button>
@@ -391,7 +364,11 @@ const Room = () => {
                 <ParticipantAvatar
                   key={listener.id}
                   roomUser={listener}
-                  isMuted={false}
+                  isMuted={
+                    listener.user.id === currentRoomUser?.user.id
+                      ? isMuted
+                      : false
+                  }
                   size="lg"
                 />
               ))}
@@ -421,7 +398,7 @@ const Room = () => {
                 size="icon"
                 onClick={() => {
                   const next = !isRaisingHand;
-                  setIsRaisingHand(next);
+                  setRaisingHand(next);
                   send("set_hand_raised", { isHandRaised: next });
                 }}
                 className="w-12 h-12"
@@ -444,31 +421,27 @@ const Room = () => {
                 )}
               </Button>
             </div>
-            <div className="w-20" />
+            <div className="flex items-center justify-end w-20">
+              {room.isChatEnabled && (
+                <Button
+                  variant="glass"
+                  size="icon"
+                  onClick={() => setChatOpen(true)}
+                  className="w-12 h-12 hover:cursor-pointer"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
 
-      <RoomUsersDrawer
-        roomId={id as string}
-        currentRoomUser={currentRoomUser}
-        open={isUsersDrawerOpen}
-        onOpenChange={setIsUsersDrawerOpen}
-      />
+      <RoomUsersDrawer roomId={id as string} />
 
-      <RaisedHandsDrawer
-        roomId={id as string}
-        raisedHandCount={raisedHandsCount}
-        currentRoomUser={currentRoomUser}
-        onPromote={(userId) => {
-          void updateUserRole(userId, "speaker");
-          setRaisedHandsVersion((v) => v + 1);
-        }}
-        open={isRaisedHandsOpen}
-        onOpenChange={setIsRaisedHandsOpen}
-        onTotalCount={setRaisedHandsCount}
-        refreshKey={raisedHandsVersion}
-      />
+      <ChatPanel roomId={id as string} />
+
+      <RaisedHandsDrawer roomId={id as string} />
 
       <Dialog
         open={isJoinModalOpen}
@@ -495,7 +468,7 @@ const Room = () => {
               onChange={(value) => {
                 setJoinCode(value.toUpperCase());
               }}
-              onComplete={(value) => joinRoom(value.toUpperCase())}
+              onComplete={(value) => handleJoinRoom(value.toUpperCase())}
               disabled={isJoining}
             >
               <InputOTPGroup>
@@ -524,7 +497,7 @@ const Room = () => {
               type="button"
               variant="glow"
               disabled={joinCode.length !== 8 || isJoining}
-              onClick={() => joinRoom(joinCode)}
+              onClick={() => handleJoinRoom(joinCode)}
             >
               {isJoining ? "Joining..." : "Join Room"}
             </Button>

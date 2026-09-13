@@ -2,6 +2,8 @@
 
 import { EventType, WsMessageHandler } from "@/lib/api/types";
 import { useEffect, useRef, useState } from "react";
+import useAudioStore from "@/store/useAudioStore";
+import { useShallow } from "zustand/react/shallow";
 
 interface UseWebRTCArgs {
   send: (event: EventType, payload: unknown) => void;
@@ -20,7 +22,9 @@ export function useWebRTC({
   const streamRef = useRef<MediaStream | null>(null);
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const { isMuted, setMuted: setIsMuted } = useAudioStore(
+    useShallow((s) => ({ isMuted: s.isMuted, setMuted: s.setMuted }))
+  );
 
   useEffect(() => {
     if (!enabled) return;

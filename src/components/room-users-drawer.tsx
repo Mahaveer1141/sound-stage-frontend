@@ -28,6 +28,8 @@ import {
   DrawerTitle
 } from "@/components/ui/drawer";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
+import useRoomStore from "@/store/useRoomStore";
+import { useShallow } from "zustand/react/shallow";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { ApiError } from "@/lib/api";
 import { ALL_ROLES, DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
@@ -98,17 +100,20 @@ const UserRow = ({ user, subtitle, role, isOnline, actions }: UserRowProps) => {
 
 interface RoomUsersDrawerProps {
   roomId: string;
-  currentRoomUser: RoomUserType | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-const RoomUsersDrawer = ({
-  roomId,
-  currentRoomUser,
-  open,
-  onOpenChange
-}: RoomUsersDrawerProps) => {
+const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
+  const {
+    isUsersDrawerOpen: open,
+    setUsersDrawerOpen: onOpenChange,
+    currentRoomUser
+  } = useRoomStore(
+    useShallow((s) => ({
+      isUsersDrawerOpen: s.isUsersDrawerOpen,
+      setUsersDrawerOpen: s.setUsersDrawerOpen,
+      currentRoomUser: s.currentRoomUser
+    }))
+  );
   const [activeTab, setActiveTab] = useState<Tab>("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<

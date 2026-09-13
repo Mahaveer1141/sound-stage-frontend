@@ -43,6 +43,7 @@ import { ApiError } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
 import { setTokens } from "@/lib/api/token";
 import useAuthEmailStore from "@/store/useAuthEmailStore";
+import { useShallow } from "zustand/react/shallow";
 
 type AuthStep = "email" | "otp";
 
@@ -110,7 +111,7 @@ const OtpForm = ({
   isResendLoading: boolean;
 }) => {
   const otpValue = useWatch({ control: otpForm.control, name: "otp" });
-  const { otpExpiresAt } = useAuthEmailStore();
+  const otpExpiresAt = useAuthEmailStore((s) => s.otpExpiresAt);
   const [remainingSeconds, setRemainingSeconds] = useState(60);
 
   useEffect(() => {
@@ -220,7 +221,15 @@ const Auth = () => {
   const [isResendLoading, setIsResendLoading] = useState(false);
 
   const { setEmail, setOtpVerified, startOtpTimer, resetOtpTimer, clearEmail } =
-    useAuthEmailStore();
+    useAuthEmailStore(
+      useShallow((s) => ({
+        setEmail: s.setEmail,
+        setOtpVerified: s.setOtpVerified,
+        startOtpTimer: s.startOtpTimer,
+        resetOtpTimer: s.resetOtpTimer,
+        clearEmail: s.clearEmail
+      }))
+    );
   const { isUserLoading, refreshUser } = useAuthGuard();
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema as any),
@@ -239,7 +248,7 @@ const Auth = () => {
     if (step === "otp") {
       startOtpTimer();
     }
-  }, [step, startOtpTimer]);
+  }, [step]);
 
   const handleRequestOtp = async (data: EmailFormData) => {
     setIsLoading(true);

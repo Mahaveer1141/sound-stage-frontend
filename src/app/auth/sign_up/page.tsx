@@ -19,10 +19,17 @@ import { ApiError } from "@/lib/api";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
 import useAuthEmailStore from "@/store/useAuthEmailStore";
+import { useShallow } from "zustand/react/shallow";
 
 const Signup = () => {
   const router = useRouter();
-  const { email, isOtpVerified, clearEmail } = useAuthEmailStore();
+  const { email, isOtpVerified, clearEmail } = useAuthEmailStore(
+    useShallow((s) => ({
+      email: s.email,
+      isOtpVerified: s.isOtpVerified,
+      clearEmail: s.clearEmail
+    }))
+  );
   const [isLoading, setIsLoading] = useState(false);
   const { isUserLoading, refreshUser } = useAuthGuard();
 
