@@ -27,7 +27,7 @@ interface UseRoomUsersResult<T> {
   isLoading: boolean;
   nextPage: () => void;
   prevPage: () => void;
-  refetch: () => void;
+  refetch: (silent?: boolean, force?: boolean) => void;
 }
 
 export function useRoomUsers(
@@ -55,14 +55,18 @@ export function useRoomUsers({
   const abortRef = useRef<AbortController | null>(null);
   const filtersKey = JSON.stringify({ blocked, roles, isOnline, query });
 
-  const fetchUsers = async (targetPage: number) => {
-    if (!roomId || !enabled) return;
+  const fetchUsers = async (
+    targetPage: number,
+    silent = false,
+    force = false
+  ) => {
+    if (!roomId || (!enabled && !force)) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const res: ApiPaginatedResponse<(RoomUserType | UserType)[]> = blocked
         ? await roomApi.blockedUsersList(
@@ -72,7 +76,15 @@ export function useRoomUsers({
           )
         : await roomApi.usersList(
             roomId,
-            { roles, isOnline, query, page: targetPage, pageSize },
+            {
+              roles,
+              isOnline,
+              query,
+              page: targetPage,
+              pageSize,
+              field: "created_at",
+              order: "desc"
+            },
             controller.signal
           );
       setUsers(res.data);
@@ -102,6 +114,6 @@ export function useRoomUsers({
     isLoading,
     nextPage: () => page < totalPages && fetchUsers(page + 1),
     prevPage: () => page > 1 && fetchUsers(page - 1),
-    refetch: () => fetchUsers(page)
+    refetch: (silent = false, force = false) => fetchUsers(page, silent, force)
   };
 }

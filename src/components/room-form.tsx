@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -453,10 +454,12 @@ export function RoomForm({
             >
               {logoPreview ? (
                 <>
-                  <img
+                  <Image
                     src={logoPreview}
                     alt="Room logo preview"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="200px"
+                    className="object-cover"
                   />
                   <button
                     type="button"
@@ -510,10 +513,12 @@ export function RoomForm({
             >
               {coverPreview ? (
                 <>
-                  <img
+                  <Image
                     src={coverPreview}
                     alt="Room cover preview"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
                   />
                   <button
                     type="button"

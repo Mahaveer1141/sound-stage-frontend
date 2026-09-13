@@ -132,6 +132,11 @@ interface Pagination {
   pageSize?: number;
 }
 
+interface Sort {
+  field?: string;
+  order?: "asc" | "desc";
+}
+
 interface SearchQuery {
   query?: string;
 }
@@ -143,7 +148,8 @@ export interface RoomQuery extends Pagination, SearchQuery, QueryParams {
   live?: boolean;
 }
 
-export interface RoomUsersQuery extends Pagination, SearchQuery, QueryParams {
+export interface RoomUsersQuery
+  extends Pagination, SearchQuery, QueryParams, Sort {
   roles?: RoomUserRole[];
   isOnline?: boolean;
 }

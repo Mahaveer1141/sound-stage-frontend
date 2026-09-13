@@ -135,8 +135,10 @@ const Room = () => {
     return null;
   };
 
-  const fetchCurrentRoomUser = async (): Promise<RoomUserType | null> => {
-    setIsCurrentRoomUserLoading(true);
+  const fetchCurrentRoomUser = async (
+    silent = false
+  ): Promise<RoomUserType | null> => {
+    if (!silent) setIsCurrentRoomUserLoading(true);
     try {
       const res = await roomApi.currentRoomUser(id as string);
       setCurrentRoomUser(res.data);
@@ -144,7 +146,7 @@ const Room = () => {
     } catch (err) {
       console.log(err);
     } finally {
-      setIsCurrentRoomUserLoading(false);
+      if (!silent) setIsCurrentRoomUserLoading(false);
     }
     return null;
   };
@@ -235,7 +237,7 @@ const Room = () => {
       (_) => {
         refetchListeners();
         refetchSpeakers();
-        fetchCurrentRoomUser();
+        fetchCurrentRoomUser(true);
       }
     );
 
@@ -354,10 +356,6 @@ const Room = () => {
               {speakers.map((speaker) => (
                 <ParticipantAvatar
                   key={speaker.id}
-                  currentRoomUser={currentRoomUser}
-                  onRoleUpdate={(role: RoomUserRole) =>
-                    updateUserRole(speaker.user.id, role)
-                  }
                   roomUser={speaker}
                   isMuted={false}
                   size="lg"
@@ -392,10 +390,6 @@ const Room = () => {
               {listeners?.map((listener) => (
                 <ParticipantAvatar
                   key={listener.id}
-                  currentRoomUser={currentRoomUser}
-                  onRoleUpdate={(role: RoomUserRole) =>
-                    updateUserRole(listener.user.id, role)
-                  }
                   roomUser={listener}
                   isMuted={false}
                   size="lg"

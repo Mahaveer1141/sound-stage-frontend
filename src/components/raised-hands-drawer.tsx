@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Hand, X } from "lucide-react";
 import {
   Drawer,
@@ -84,11 +85,13 @@ const RaisedHandsDrawer = ({
                   <span className="text-sm text-muted-foreground shrink-0">
                     {index + 1}.
                   </span>
-                  <img
+                  <Image
                     src={
                       roomUser.user.profilePicture?.url || DEFAULT_USER_AVATAR
                     }
                     alt={roomUser.user.fullName}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
                   />
                   <div className="flex-1 min-w-0">

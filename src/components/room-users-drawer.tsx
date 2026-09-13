@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { Filter, Search, Users, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   FilterDropdown,
   countActiveFilters,
@@ -18,9 +20,12 @@ import {
   DrawerTitle
 } from "@/components/ui/drawer";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
+import { roomApi } from "@/lib/api/endpoints/room";
+import { ApiError } from "@/lib/api";
 import { ALL_ROLES, DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
 import { capitalize, cn } from "@/lib/utils";
 import { RoomUserRole, RoomUserType, UserType } from "@/lib/api/types";
+import UserActionsMenu, { UserAction } from "@/components/user-action-menu";
 
 const USER_FILTERS: FilterConfig[] = [
   {
@@ -50,18 +55,21 @@ interface UserRowProps {
   subtitle: string;
   role?: RoomUserRole;
   isOnline?: boolean;
+  actions?: React.ReactNode;
 }
 
-const UserRow = ({ user, subtitle, role, isOnline }: UserRowProps) => {
+const UserRow = ({ user, subtitle, role, isOnline, actions }: UserRowProps) => {
   const avatar = user.profilePicture?.url || DEFAULT_USER_AVATAR;
   const RoleIcon = role ? ROLE_ICONS[role] : undefined;
 
   return (
     <div className="flex items-center gap-3 py-3">
       <div className="relative shrink-0">
-        <img
+        <Image
           src={avatar}
           alt={user.fullName}
+          width={44}
+          height={44}
           className="w-11 h-11 rounded-full object-cover border border-border"
         />
         {isOnline && (
@@ -75,6 +83,7 @@ const UserRow = ({ user, subtitle, role, isOnline }: UserRowProps) => {
         </p>
         <p className="text-xs text-muted-foreground capitalize">{subtitle}</p>
       </div>
+      {actions}
     </div>
   );
 };
@@ -106,15 +115,23 @@ const RoomUsersDrawer = ({
     : undefined;
   const activeFilterCount = countActiveFilters(selectedFilters);
 
-  const { users, isLoading, count, page, totalPages, nextPage, prevPage } =
-    useRoomUsers({
-      roomId,
-      roles,
-      isOnline,
-      query: searchQuery || undefined,
-      pageSize: 20,
-      enabled: open && activeTab === "active"
-    });
+  const {
+    users,
+    isLoading,
+    count,
+    page,
+    totalPages,
+    nextPage,
+    prevPage,
+    refetch
+  } = useRoomUsers({
+    roomId,
+    roles,
+    isOnline,
+    query: searchQuery || undefined,
+    pageSize: 20,
+    enabled: open && activeTab === "active"
+  });
 
   const {
     users: blockedUsers,
@@ -123,7 +140,8 @@ const RoomUsersDrawer = ({
     page: blockedPage,
     totalPages: blockedTotalPages,
     nextPage: nextBlockedPage,
-    prevPage: prevBlockedPage
+    prevPage: prevBlockedPage,
+    refetch: refetchBlocked
   } = useRoomUsers({
     roomId,
     blocked: true,
@@ -131,6 +149,44 @@ const RoomUsersDrawer = ({
     pageSize: 20,
     enabled: open && !!currentRoomUser?.isAdmin
   });
+
+  const handleUserAction = async (
+    roomUser: RoomUserType,
+    action: UserAction
+  ) => {
+    try {
+      switch (action.type) {
+        case "role":
+          await roomApi.updateUserRole(roomId, roomUser.user.id, action.role);
+          break;
+        case "kick":
+          await roomApi.deleteUser(roomId, roomUser.user.id);
+          break;
+        case "block":
+          await roomApi.blockUser(roomId, roomUser.user.id);
+          break;
+        case "mute":
+          await roomApi.setUserMuted(roomId, roomUser.user.id);
+          break;
+      }
+      refetch(true);
+      refetchBlocked(true);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Action failed");
+    }
+  };
+
+  const handleUnblock = async (userId: number) => {
+    try {
+      await roomApi.unblockUser(roomId, userId);
+      refetch(true, true);
+      refetchBlocked(true);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to unblock user"
+      );
+    }
+  };
 
   const currentPage = activeTab === "active" ? page : blockedPage;
   const currentTotalPages =
@@ -222,7 +278,7 @@ const RoomUsersDrawer = ({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
           <div className="divide-y divide-border/50">
             {activeTab === "active" ? (
               isLoading ? (
@@ -241,6 +297,15 @@ const RoomUsersDrawer = ({
                     subtitle={roomUser.role.name}
                     role={roomUser.role.name as RoomUserRole}
                     isOnline={roomUser.isOnline}
+                    actions={
+                      <UserActionsMenu
+                        roomUser={roomUser}
+                        currentRoomUser={currentRoomUser}
+                        onAction={(action) =>
+                          handleUserAction(roomUser, action)
+                        }
+                      />
+                    }
                   />
                 ))
               )
@@ -254,37 +319,51 @@ const RoomUsersDrawer = ({
               </p>
             ) : (
               blockedUsers.map((user) => (
-                <UserRow key={user.id} user={user} subtitle="Blocked" />
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  subtitle="Blocked"
+                  actions={
+                    <Button
+                      variant="glass"
+                      size="xs"
+                      className="hover:cursor-pointer shrink-0"
+                      onClick={() => handleUnblock(user.id)}
+                    >
+                      Unblock
+                    </Button>
+                  }
+                />
               ))
             )}
           </div>
-
-          {currentTotalPages > 1 && (
-            <div className="flex items-center justify-between pt-4 border-t border-border/50">
-              <Button
-                variant="glass"
-                size="sm"
-                className="hover:cursor-pointer"
-                disabled={currentPage <= 1}
-                onClick={onPrevPage}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {currentTotalPages}
-              </span>
-              <Button
-                variant="glass"
-                size="sm"
-                className="hover:cursor-pointer"
-                disabled={currentPage >= currentTotalPages}
-                onClick={onNextPage}
-              >
-                Next
-              </Button>
-            </div>
-          )}
         </div>
+
+        {currentTotalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 shrink-0">
+            <Button
+              variant="glass"
+              size="sm"
+              className="hover:cursor-pointer"
+              disabled={currentPage <= 1}
+              onClick={onPrevPage}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {currentTotalPages}
+            </span>
+            <Button
+              variant="glass"
+              size="sm"
+              className="hover:cursor-pointer"
+              disabled={currentPage >= currentTotalPages}
+              onClick={onNextPage}
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </DrawerContent>
     </Drawer>
   );

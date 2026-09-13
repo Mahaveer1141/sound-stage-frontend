@@ -1,12 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Radio, Star, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import AudioWave from "./audio-wave";
+import AudioWave from "@/components/audio-wave";
 import { roomUserFavouriteApi } from "@/lib/api/endpoints/room-user-favourite";
 import type {
   FileAttachmentType,
@@ -14,6 +15,7 @@ import type {
   TagType,
   RoomAccessType
 } from "@/lib/api/types";
+import { DEFAULT_ROOM_COVER, DEFAULT_ROOM_LOGO } from "@/lib/constants";
 
 interface RoomCardProps {
   id: number;
@@ -68,12 +70,8 @@ const RoomCard = ({
     }
   };
 
-  const coverUrl =
-    coverImage?.url ||
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
-  const logoUrl =
-    logoImage?.url ||
-    "https://www.svgrepo.com/show/508699/landscape-placeholder.svg";
+  const coverUrl = coverImage?.url || DEFAULT_ROOM_COVER;
+  const logoUrl = logoImage?.url || DEFAULT_ROOM_LOGO;
 
   return (
     <Link href={`/rooms/${id}`}>
@@ -84,16 +82,20 @@ const RoomCard = ({
       >
         <Card className="glass py-0 glass-hover cursor-pointer group overflow-hidden">
           <div className="relative w-full h-32">
-            <img
+            <Image
               src={coverUrl}
               alt={`${name} cover`}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              fill
+              sizes="100vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute -bottom-5 left-4 w-12 h-12 rounded-full border-2 border-card bg-background overflow-hidden">
-              <img
+              <Image
                 src={logoUrl}
                 alt={`${name} logo`}
-                className="w-full h-full object-cover"
+                fill
+                sizes="48px"
+                className="object-cover"
               />
             </div>
           </div>

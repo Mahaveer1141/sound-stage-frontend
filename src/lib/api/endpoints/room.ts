@@ -89,5 +89,33 @@ export const roomApi = {
     role: RoomUserRole
   ): Promise<ApiBaseResponse<RoomUserType>> => {
     return api.put(`/rooms/${roomId}/users/${userId}/role`, { role });
+  },
+
+  deleteUser: (
+    roomId: string,
+    userId: number
+  ): Promise<ApiBaseResponse<unknown>> => {
+    return api.delete(`/rooms/${roomId}/users/${userId}`);
+  },
+
+  setUserMuted: (
+    roomId: string,
+    userId: number
+  ): Promise<ApiBaseResponse<unknown>> => {
+    return api.put(`/rooms/${roomId}/users/${userId}/mute`);
+  },
+
+  blockUser: (
+    roomId: string,
+    userId: number
+  ): Promise<ApiBaseResponse<unknown>> => {
+    return api.patch(`/rooms/${roomId}/blocks/${userId}`);
+  },
+
+  unblockUser: (
+    roomId: string,
+    userId: number
+  ): Promise<ApiBaseResponse<unknown>> => {
+    return api.delete(`/rooms/${roomId}/blocks/${userId}`);
   }
 } as const;
