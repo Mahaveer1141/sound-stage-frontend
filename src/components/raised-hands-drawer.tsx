@@ -45,7 +45,7 @@ const RaisedHandsDrawer = ({ roomId }: RaisedHandsDrawerProps) => {
 
   return (
     <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="glass border-l border-border/50 data-[vaul-drawer-direction=right]:w-1/2 data-[vaul-drawer-direction=right]:min-w-75 data-[vaul-drawer-direction=right]:sm:max-w-none">
+      <DrawerContent className="glass border-l border-border/50 data-[vaul-drawer-direction=right]:w-full data-[vaul-drawer-direction=right]:sm:w-1/2 data-[vaul-drawer-direction=right]:sm:min-w-75 data-[vaul-drawer-direction=right]:sm:max-w-none">
         <DrawerHeader className="flex-row items-center justify-between border-b border-border/50 p-6">
           <DrawerTitle className="text-xl font-bold flex items-center gap-2">
             <Hand className="w-5 h-5 text-primary" />

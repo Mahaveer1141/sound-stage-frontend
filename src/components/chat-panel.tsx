@@ -75,7 +75,7 @@ const PinnedRow = ({
   const name = message.user?.fullName ?? "Unknown";
 
   return (
-    <div className="group/pinned flex gap-2 items-start">
+    <div className="flex gap-2 items-start">
       <Avatar className="size-6 shrink-0">
         <AvatarImage
           src={message.user?.profilePicture?.url || DEFAULT_USER_AVATAR}
@@ -97,7 +97,7 @@ const PinnedRow = ({
               size="icon-xs"
               aria-label="Unpin message"
               onClick={() => onUnpin(message)}
-              className="size-5 shrink-0 hover:cursor-pointer opacity-0 transition-opacity group-hover/pinned:opacity-100"
+              className="size-5 shrink-0 hover:cursor-pointer"
             >
               <PinOff />
             </Button>
@@ -175,7 +175,7 @@ const MessageRow = ({
                     message.isPinned ? "Unpin message" : "Pin message"
                   }
                   onClick={() => onTogglePin(message)}
-                  className="size-5 hover:cursor-pointer opacity-0 transition-opacity group-hover/message:opacity-100 focus-visible:opacity-100"
+                  className="size-5 hover:cursor-pointer"
                 >
                   {message.isPinned ? <PinOff /> : <Pin />}
                 </Button>
@@ -359,7 +359,7 @@ const ChatPanel = ({ roomId }: ChatPanelProps) => {
 
   return (
     <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="glass border-l border-border/50 data-[vaul-drawer-direction=right]:w-1/2 data-[vaul-drawer-direction=right]:min-w-75 data-[vaul-drawer-direction=right]:sm:max-w-none">
+      <DrawerContent className="glass border-l border-border/50 data-[vaul-drawer-direction=right]:w-full data-[vaul-drawer-direction=right]:sm:w-1/2 data-[vaul-drawer-direction=right]:sm:min-w-75 data-[vaul-drawer-direction=right]:sm:max-w-none">
         <DrawerHeader className="flex-row items-center justify-between border-b border-border/50 p-6">
           <div>
             <DrawerTitle className="text-xl font-bold flex items-center gap-2">

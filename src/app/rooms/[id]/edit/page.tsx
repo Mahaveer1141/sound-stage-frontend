@@ -26,6 +26,19 @@ const EditRoom = () => {
     const fetchRoom = async () => {
       if (!id) return;
       setIsRoomLoading(true);
+
+      try {
+        const memberRes = await roomApi.currentRoomUser(id as string);
+        if (!memberRes.data.isAdmin) {
+          toast.error("Only admins can update this room");
+          router.push("/rooms");
+          return;
+        }
+      } catch {
+        router.push("/rooms");
+        return;
+      }
+
       try {
         const res = await roomApi.show(id as string);
         setRoom(res.data);

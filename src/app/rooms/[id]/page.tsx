@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ParticipantAvatar from "@/components/participant-avatar";
 import AudioWave from "@/components/audio-wave";
@@ -16,12 +19,13 @@ import {
   MoreHorizontal,
   Users,
   Share2,
-  Settings
+  SquarePen
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -43,6 +47,9 @@ import RaisedHandsDrawer from "@/components/raised-hands-drawer";
 import RoomUsersDrawer from "@/components/room-users-drawer";
 import ChatPanel from "@/components/chat-panel";
 import { RoomUserRole, WsErrorPayloadType } from "@/lib/api/types";
+import { roomApi } from "@/lib/api/endpoints/room";
+import { ApiError } from "@/lib/api";
+import { DEFAULT_ROOM_LOGO } from "@/lib/constants";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import RemoteAudio from "@/components/remote-audio";
@@ -61,6 +68,8 @@ const Room = () => {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
 
   const {
     room,
@@ -140,6 +149,22 @@ const Room = () => {
 
   const handleLeave = () => {
     router.push("/rooms");
+  };
+
+  const handleLeavePermanently = async () => {
+    if (!currentRoomUser || isLeavingRoom) return;
+
+    setIsLeavingRoom(true);
+    try {
+      await roomApi.deleteUser(id as string, currentRoomUser.user.id);
+      toast.success("You have left the room");
+      router.push("/rooms");
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to leave room"
+      );
+      setIsLeavingRoom(false);
+    }
   };
 
   const handleJoinRoom = async (privateCode = "") => {
@@ -252,39 +277,69 @@ const Room = () => {
           className="mb-8"
         >
           <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/20 text-destructive text-xs font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-                  LIVE
-                </span>
+            <div className="flex-1 flex items-start gap-4 min-w-0">
+              <div className="relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border border-border shrink-0">
+                <Image
+                  src={room.logoImage?.url || DEFAULT_ROOM_LOGO}
+                  alt={`${room.name} logo`}
+                  fill
+                  sizes="(min-width: 768px) 56px, 48px"
+                  className="object-cover"
+                />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">
-                {room.name}
-              </h1>
-              <p className="text-muted-foreground">{room.description}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-destructive/20 text-destructive text-xs font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                    LIVE
+                  </span>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                  {room.name}
+                </h1>
+                <p className="text-muted-foreground">{room.description}</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="glass" size="icon">
                 <Share2 className="w-5 h-5" />
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="glass" size="icon">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="glass">
-                  <DropdownMenuItem>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Room Settings
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {currentRoomUser && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="glass" size="icon">
+                      <MoreHorizontal className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="glass">
+                    {currentRoomUser.isAdmin && (
+                      <Link href={`/rooms/${id}/edit`}>
+                        <DropdownMenuItem className="cursor-pointer">
+                          <SquarePen className="w-4 h-4 mr-2" />
+                          Update Stage
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
+                    {currentRoomUser.isAdmin && !currentRoomUser.isOwner && (
+                      <DropdownMenuSeparator />
+                    )}
+                    {!currentRoomUser.isOwner && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        className="cursor-pointer"
+                        onSelect={() => setIsLeaveDialogOpen(true)}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Leave Permanently
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Mic className="w-4 h-4 text-primary" />
               <span>{speakerCount} Speakers</span>
@@ -300,6 +355,14 @@ const Room = () => {
               onClick={() => setUsersDrawerOpen(true)}
             >
               View all ({room.totalUsers ?? speakerCount + listenerCount})
+            </Button>
+            <Button
+              variant="glass"
+              size="xs"
+              className="hover:cursor-pointer"
+              onClick={() => setRaisedHandsOpen(true)}
+            >
+              View Raised Hands ({raisedHandsCount})
             </Button>
           </div>
         </motion.div>
@@ -343,20 +406,10 @@ const Room = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Users className="w-5 h-5 text-muted-foreground" />
-              Listeners
-            </h2>
-            <Button
-              variant="glass"
-              size="sm"
-              className="text-xs hover:cursor-pointer"
-              onClick={() => setRaisedHandsOpen(true)}
-            >
-              View Raised Hands ({raisedHandsCount})
-            </Button>
-          </div>
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
+            <Users className="w-5 h-5 text-muted-foreground" />
+            Listeners
+          </h2>
 
           <div className="glass rounded-2xl p-6">
             <div className="flex flex-wrap gap-6 justify-start">
@@ -464,6 +517,7 @@ const Room = () => {
           <div className="flex justify-center py-4">
             <InputOTP
               maxLength={8}
+              containerClassName="w-full"
               value={joinCode}
               onChange={(value) => {
                 setJoinCode(value.toUpperCase());
@@ -471,12 +525,12 @@ const Room = () => {
               onComplete={(value) => handleJoinRoom(value.toUpperCase())}
               disabled={isJoining}
             >
-              <InputOTPGroup>
+              <InputOTPGroup className="w-full justify-center">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <InputOTPSlot
                     key={i}
                     index={i}
-                    className="h-11 w-11 text-lg"
+                    className="aspect-square h-auto w-full max-w-11 text-lg"
                   />
                 ))}
               </InputOTPGroup>
@@ -500,6 +554,35 @@ const Room = () => {
               onClick={() => handleJoinRoom(joinCode)}
             >
               {isJoining ? "Joining..." : "Join Room"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+        <DialogContent className="glass border-border/50">
+          <DialogHeader>
+            <DialogTitle>Leave Room Permanently</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave {room.name}? You will be removed
+              from the room and will need to join again to come back.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              className="hover:cursor-pointer"
+              onClick={() => setIsLeaveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="hover:cursor-pointer"
+              disabled={isLeavingRoom}
+              onClick={handleLeavePermanently}
+            >
+              {isLeavingRoom ? "Leaving..." : "Leave Permanently"}
             </Button>
           </DialogFooter>
         </DialogContent>

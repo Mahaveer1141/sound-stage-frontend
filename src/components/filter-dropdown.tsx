@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -11,11 +11,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -63,6 +61,7 @@ export function FilterDropdown({
   );
   const [options, setOptions] = useState<Record<string, FilterOption[]>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   const visibleFilters = useMemo(() => {
     const term = filterSearch.trim().toLowerCase();
@@ -119,8 +118,10 @@ export function FilterDropdown({
 
   const hasActiveFilters = filters.some((f) => (value[f.key]?.length ?? 0) > 0);
 
-  const handleOpenChange = (open: boolean, filter: FilterConfig) => {
-    if (open) {
+  const toggleFilter = (filter: FilterConfig) => {
+    const isOpening = openFilter !== filter.key;
+    setOpenFilter(isOpening ? filter.key : null);
+    if (isOpening) {
       loadApiOptions(filter, optionSearches[filter.key] ?? "");
     }
   };
@@ -147,11 +148,15 @@ export function FilterDropdown({
         )}
 
         {visibleFilters.map((filter) => (
-          <DropdownMenuSub
-            key={filter.key}
-            onOpenChange={(open) => handleOpenChange(open, filter)}
-          >
-            <DropdownMenuSubTrigger className="w-full cursor-pointer">
+          <div key={filter.key}>
+            <DropdownMenuItem
+              className="w-full cursor-pointer"
+              aria-expanded={openFilter === filter.key}
+              onSelect={(e) => {
+                e.preventDefault();
+                toggleFilter(filter);
+              }}
+            >
               {filter.label}
               {value[filter.key]?.length ? (
                 <span className="flex items-center gap-1.5">
@@ -178,73 +183,55 @@ export function FilterDropdown({
                   </Tooltip>
                 </span>
               ) : null}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-64 p-2" sideOffset={4}>
-              <div className="relative mb-2">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  autoFocus
-                  placeholder="Search..."
-                  value={optionSearches[filter.key] ?? ""}
-                  onChange={(e) => {
-                    const searchQuery = e.target.value;
-                    setOptionSearches((prev) => ({
-                      ...prev,
-                      [filter.key]: searchQuery
-                    }));
-                    if (filter.useApiSearch) {
-                      loadApiOptions(filter, searchQuery);
-                    }
-                  }}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  className="pl-8"
-                />
-              </div>
+              <ChevronDown
+                className={cn(
+                  "ml-auto size-4 text-muted-foreground transition-transform",
+                  openFilter === filter.key && "rotate-180"
+                )}
+              />
+            </DropdownMenuItem>
 
-              {loading[filter.key] ? (
-                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  Loading...
+            {openFilter === filter.key && (
+              <div className="mb-1 ml-2 border-l pl-2">
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    autoFocus
+                    placeholder="Search..."
+                    value={optionSearches[filter.key] ?? ""}
+                    onChange={(e) => {
+                      const searchQuery = e.target.value;
+                      setOptionSearches((prev) => ({
+                        ...prev,
+                        [filter.key]: searchQuery
+                      }));
+                      if (filter.useApiSearch) {
+                        loadApiOptions(filter, searchQuery);
+                      }
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="pl-8"
+                  />
                 </div>
-              ) : (
-                <div className="max-h-60 overflow-y-auto">
-                  {filter.multi ? (
-                    getOptions(filter).map((option) => (
-                      <DropdownMenuCheckboxItem
-                        key={option.value}
-                        className="cursor-pointer"
-                        checked={(value[filter.key] ?? []).includes(
-                          option.value
-                        )}
-                        onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={() =>
-                          setMultiValue(filter.key, option.value)
-                        }
-                      >
-                        {option.description ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex-1">{option.label}</span>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                              {option.description}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          option.label
-                        )}
-                      </DropdownMenuCheckboxItem>
-                    ))
-                  ) : (
-                    <DropdownMenuRadioGroup
-                      value={value[filter.key]?.[0] ?? ""}
-                      onValueChange={(v) => setSingleValue(filter.key, v)}
-                    >
-                      {getOptions(filter).map((option) => (
-                        <DropdownMenuRadioItem
+
+                {loading[filter.key] ? (
+                  <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                    Loading...
+                  </div>
+                ) : (
+                  <div className="max-h-60 overflow-y-auto">
+                    {filter.multi ? (
+                      getOptions(filter).map((option) => (
+                        <DropdownMenuCheckboxItem
                           key={option.value}
                           className="cursor-pointer"
-                          value={option.value}
+                          checked={(value[filter.key] ?? []).includes(
+                            option.value
+                          )}
                           onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={() =>
+                            setMultiValue(filter.key, option.value)
+                          }
                         >
                           {option.description ? (
                             <Tooltip>
@@ -258,19 +245,47 @@ export function FilterDropdown({
                           ) : (
                             option.label
                           )}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  )}
-                  {getOptions(filter).length === 0 && !loading[filter.key] && (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      No options
-                    </div>
-                  )}
-                </div>
-              )}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    ) : (
+                      <DropdownMenuRadioGroup
+                        value={value[filter.key]?.[0] ?? ""}
+                        onValueChange={(v) => setSingleValue(filter.key, v)}
+                      >
+                        {getOptions(filter).map((option) => (
+                          <DropdownMenuRadioItem
+                            key={option.value}
+                            className="cursor-pointer"
+                            value={option.value}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            {option.description ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex-1">{option.label}</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  {option.description}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              option.label
+                            )}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    )}
+                    {getOptions(filter).length === 0 &&
+                      !loading[filter.key] && (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                          No options
+                        </div>
+                      )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         ))}
 
         {hasActiveFilters && (
