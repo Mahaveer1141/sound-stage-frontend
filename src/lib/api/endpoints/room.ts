@@ -23,6 +23,10 @@ export const roomApi = {
     return api.put(`/rooms/${id}`, input);
   },
 
+  destroy: (id: string): Promise<ApiBaseResponse<unknown>> => {
+    return api.delete(`/rooms/${id}`);
+  },
+
   updatePrivateCode: (id: number): Promise<ApiBaseResponse<unknown>> => {
     return api.patch(`/rooms/${id}/private-code`);
   },

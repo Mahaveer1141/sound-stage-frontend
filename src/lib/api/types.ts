@@ -180,6 +180,7 @@ export type WsErrorPayloadType = {
 export type EventType =
   | "join_room"
   | "leave_room"
+  | "room_deleted"
   | "webrtc_offer"
   | "webrtc_answer"
   | "webrtc_candidate"

@@ -18,7 +18,6 @@ import {
   MessageSquare,
   MoreHorizontal,
   Users,
-  Share2,
   SquarePen
 } from "lucide-react";
 import {
@@ -111,7 +110,7 @@ const Room = () => {
     }))
   );
 
-  const { onConnect, subscribe, send, isConnected } = useWebSocket(
+  const { onConnect, subscribe, send, disconnect, isConnected } = useWebSocket(
     `/ws/rooms/${id}`,
     hasJoined
   );
@@ -245,6 +244,12 @@ const Room = () => {
       }
     );
 
+    subscribe("room_deleted", () => {
+      toast.error("This room was deleted by the owner");
+      disconnect();
+      router.push("/rooms");
+    });
+
     return () => {
       if (!useConnectionStore.getState().isConnected) return;
       send("leave_room", {});
@@ -301,9 +306,6 @@ const Room = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="glass" size="icon">
-                <Share2 className="w-5 h-5" />
-              </Button>
               {currentRoomUser && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

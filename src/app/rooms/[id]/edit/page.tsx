@@ -3,11 +3,20 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Mic, Save } from "lucide-react";
+import { Mic, Save, Trash2 } from "lucide-react";
 import FloatingOrbs from "@/components/floating-orbs";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import Loader from "@/components/loader";
 import { RoomForm } from "@/components/room-form";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
@@ -19,8 +28,11 @@ const EditRoom = () => {
   const { isUserLoading } = useAuthGuard();
 
   const [room, setRoom] = useState<RoomType | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [isRoomLoading, setIsRoomLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -34,6 +46,7 @@ const EditRoom = () => {
           router.push("/rooms");
           return;
         }
+        setIsOwner(memberRes.data.isOwner);
       } catch {
         router.push("/rooms");
         return;
@@ -63,6 +76,22 @@ const EditRoom = () => {
       toast.error((error as ApiError).message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const deleteRoom = async () => {
+    if (!id || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await roomApi.destroy(id as string);
+      toast.success("Room deleted successfully");
+      router.push("/rooms");
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to delete room"
+      );
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -112,7 +141,63 @@ const EditRoom = () => {
             }
           />
         </motion.div>
+
+        {isOwner && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass rounded-2xl p-8 mt-6 border border-destructive/30"
+          >
+            <h2 className="text-lg font-semibold text-destructive mb-2">
+              Danger Zone
+            </h2>
+            <p className="text-muted-foreground text-sm mb-4">
+              Deleting this room is permanent. All members, messages and room
+              data will be removed.
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              className="hover:cursor-pointer"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Room
+            </Button>
+          </motion.div>
+        )}
       </div>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="glass border-border/50">
+          <DialogHeader>
+            <DialogTitle>Delete Room</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {room.name}? This action is
+              permanent and will remove all members, messages, favourites and
+              room data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              className="hover:cursor-pointer"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="hover:cursor-pointer"
+              disabled={isDeleting}
+              onClick={deleteRoom}
+            >
+              {isDeleting ? "Deleting..." : "Delete Room"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
