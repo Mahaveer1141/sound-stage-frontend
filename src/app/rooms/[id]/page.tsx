@@ -119,19 +119,23 @@ const Room = () => {
     users: speakers,
     isLoading: isSpeakersLoading,
     count: speakerCount,
-    refetch: refetchSpeakers
+    insert: insertSpeaker,
+    removeByUserId: removeSpeaker,
+    backfill: backfillSpeakers
   } = useRoomUsers({
     roomId: id as string,
     roles: ["admin", "speaker", "moderator", "owner"],
     isOnline: true,
-    pageSize: 10,
+    pageSize: 20,
     enabled: hasJoined
   });
   const {
     users: listeners,
     isLoading: isListenersLoading,
     count: listenerCount,
-    refetch: refetchListeners
+    insert: insertListener,
+    removeByUserId: removeListener,
+    backfill: backfillListeners
   } = useRoomUsers({
     roomId: id as string,
     roles: ["listener"],
@@ -233,6 +237,16 @@ const Room = () => {
         roomUser.user.id === useRoomStore.getState().currentRoomUser?.user.id
       ) {
         void fetchCurrentRoomUser(id as string, true);
+      }
+
+      if (roomUser.canSpeak) {
+        removeListener(roomUser.user.id);
+        insertSpeaker(roomUser);
+        backfillListeners();
+      } else {
+        removeSpeaker(roomUser.user.id);
+        insertListener(roomUser);
+        backfillSpeakers();
       }
     });
 

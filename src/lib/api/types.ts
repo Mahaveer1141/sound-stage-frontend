@@ -33,7 +33,7 @@ export interface ApiPaginatedResponse<T = unknown> extends ApiBaseResponse<T> {
     page: number;
     totalCount: number;
     totalPages: number;
-    nextCursor: number;
+    nextCursor: string;
     hasMore: boolean;
   };
 }
@@ -112,6 +112,7 @@ export interface RoomUserType {
   canManage: boolean;
   canSpeak: boolean;
   isOwner: boolean;
+  lastJoinedAt: string;
 }
 
 export interface SignUpInput {
@@ -143,7 +144,7 @@ interface Pagination {
 }
 
 interface CursorPagination {
-  cursor?: number;
+  cursor?: string;
   limit?: number;
 }
 
@@ -181,6 +182,7 @@ export type WsErrorPayloadType = {
 };
 export type EventType =
   | "join_room"
+  | "join_stream"
   | "leave_room"
   | "room_deleted"
   | "webrtc_offer"

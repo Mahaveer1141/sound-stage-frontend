@@ -18,7 +18,51 @@ interface UseRoomUsersResult {
   hasMore: boolean;
   isLoading: boolean;
   nextPage: () => void;
+  backfill: (timeoutSeconds?: number) => void;
+  insert: (roomUser: RoomUserType) => void;
+  removeByUserId: (userId: number) => void;
   refetch: (silent?: boolean, force?: boolean) => void;
+}
+
+const cursorOf = (u: RoomUserType) => `${u.lastJoinedAt}_${u.id}`;
+
+const compare = (a: RoomUserType, b: RoomUserType) =>
+  a.lastJoinedAt === b.lastJoinedAt
+    ? a.id - b.id
+    : a.lastJoinedAt < b.lastJoinedAt
+      ? -1
+      : 1;
+
+interface InsertWindowResult {
+  users: RoomUserType[];
+  inserted: boolean;
+  dropped: boolean;
+  cursor?: string;
+}
+
+export function insertWindowUser(
+  list: RoomUserType[],
+  roomUser: RoomUserType,
+  pageSize: number
+): InsertWindowResult {
+  const exists = list.some((u) => u.user.id === roomUser.user.id);
+  if (exists) {
+    return {
+      users: list.map((u) => (u.user.id === roomUser.user.id ? roomUser : u)),
+      inserted: false,
+      dropped: false
+    };
+  }
+
+  const updatedList = [...list, roomUser].sort(compare).slice(0, pageSize);
+  const inserted = updatedList.includes(roomUser);
+  const newLast = updatedList[updatedList.length - 1];
+  return {
+    users: inserted ? updatedList : list,
+    inserted,
+    dropped: inserted && list.length >= pageSize,
+    cursor: inserted && newLast ? cursorOf(newLast) : undefined
+  };
 }
 
 export function useRoomUsers({
@@ -30,16 +74,31 @@ export function useRoomUsers({
   enabled = true
 }: UseRoomUsersOptions): UseRoomUsersResult {
   const [users, setUsers] = useState<RoomUserType[]>([]);
-  const [nextCursor, setNextCursor] = useState(0);
+  const [nextCursor, setNextCursor] = useState("");
   const [hasMore, setHasMore] = useState(false);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const backfillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const usersRef = useRef<RoomUserType[]>([]);
+  const nextCursorRef = useRef("");
+  const hasMoreRef = useRef(false);
+  const enabledRef = useRef(enabled);
+  usersRef.current = users;
+  nextCursorRef.current = nextCursor;
+  hasMoreRef.current = hasMore;
+  enabledRef.current = enabled;
+
   const filtersKey = JSON.stringify({ roles, isOnline, query });
 
-  const fetchUsers = async (cursor: number, silent = false, force = false) => {
-    if (!roomId || (!enabled && !force)) return;
+  const fetchUsers = async (
+    cursor: string,
+    silent = false,
+    force = false,
+    limit = pageSize
+  ) => {
+    if (!roomId || (!enabledRef.current && !force)) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -49,10 +108,14 @@ export function useRoomUsers({
     try {
       const res = await roomApi.usersList(
         roomId,
-        { roles, isOnline, query, cursor, limit: pageSize },
+        { roles, isOnline, query, cursor, limit },
         controller.signal
       );
-      setUsers((prev) => (cursor === 0 ? res.data : [...prev, ...res.data]));
+      setUsers((prev) => {
+        if (cursor === "") return res.data;
+        const seen = new Set(prev.map((u) => u.id));
+        return [...prev, ...res.data.filter((u) => !seen.has(u.id))];
+      });
       setCount(res.pagination.totalCount);
       setNextCursor(res.pagination.nextCursor);
       setHasMore(res.pagination.hasMore);
@@ -65,8 +128,11 @@ export function useRoomUsers({
   };
 
   useEffect(() => {
-    fetchUsers(0);
-    return () => abortRef.current?.abort();
+    fetchUsers("");
+    return () => {
+      abortRef.current?.abort();
+      if (backfillTimerRef.current) clearTimeout(backfillTimerRef.current);
+    };
   }, [enabled, filtersKey]);
 
   return {
@@ -74,7 +140,38 @@ export function useRoomUsers({
     count,
     hasMore,
     isLoading,
-    nextPage: () => hasMore && fetchUsers(nextCursor),
-    refetch: (silent = false, force = false) => fetchUsers(0, silent, force)
+    nextPage: () => hasMoreRef.current && fetchUsers(nextCursorRef.current),
+
+    backfill: (timeoutDuration = 0) => {
+      if (backfillTimerRef.current) clearTimeout(backfillTimerRef.current);
+
+      backfillTimerRef.current = setTimeout(() => {
+        const needed = pageSize - usersRef.current.length;
+        if (hasMoreRef.current && needed > 0) {
+          fetchUsers(nextCursorRef.current, true, false, needed);
+        }
+      }, timeoutDuration);
+    },
+
+    insert: (roomUser) => {
+      const result = insertWindowUser(usersRef.current, roomUser, pageSize);
+      usersRef.current = result.users;
+      setUsers(result.users);
+      if (result.inserted) setCount((c) => c + 1);
+      if (result.cursor) {
+        nextCursorRef.current = result.cursor;
+        setNextCursor(result.cursor);
+      }
+      if (result.dropped) setHasMore(true);
+    },
+
+    removeByUserId: (userId) => {
+      const exists = usersRef.current.some((u) => u.user.id === userId);
+      const updated = usersRef.current.filter((u) => u.user.id !== userId);
+      usersRef.current = updated;
+      setUsers(updated);
+      if (exists) setCount((c) => Math.max(0, c - 1));
+    },
+    refetch: (silent = false, force = false) => fetchUsers("", silent, force)
   };
 }
