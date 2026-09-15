@@ -33,6 +33,8 @@ export interface ApiPaginatedResponse<T = unknown> extends ApiBaseResponse<T> {
     page: number;
     totalCount: number;
     totalPages: number;
+    nextCursor: number;
+    hasMore: boolean;
   };
 }
 
@@ -140,9 +142,9 @@ interface Pagination {
   pageSize?: number;
 }
 
-interface Sort {
-  field?: string;
-  order?: "asc" | "desc";
+interface CursorPagination {
+  cursor?: number;
+  limit?: number;
 }
 
 interface SearchQuery {
@@ -157,7 +159,7 @@ export interface RoomQuery extends Pagination, SearchQuery, QueryParams {
 }
 
 export interface RoomUsersQuery
-  extends Pagination, SearchQuery, QueryParams, Sort {
+  extends CursorPagination, SearchQuery, QueryParams {
   roles?: RoomUserRole[];
   isOnline?: boolean;
 }

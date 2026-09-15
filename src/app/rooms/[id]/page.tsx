@@ -45,7 +45,7 @@ import Loader from "@/components/loader";
 import RaisedHandsDrawer from "@/components/raised-hands-drawer";
 import RoomUsersDrawer from "@/components/room-users-drawer";
 import ChatPanel from "@/components/chat-panel";
-import { RoomUserRole, WsErrorPayloadType } from "@/lib/api/types";
+import { RoomUserType, WsErrorPayloadType } from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { ApiError } from "@/lib/api";
 import { DEFAULT_ROOM_LOGO } from "@/lib/constants";
@@ -228,14 +228,13 @@ const Room = () => {
       refetchSpeakers();
     });
 
-    subscribe<{ userId: number; role: RoomUserRole }>(
-      "user_role_updated",
-      (_) => {
-        refetchListeners();
-        refetchSpeakers();
-        fetchCurrentRoomUser(id as string, true);
+    subscribe<RoomUserType>("user_role_updated", (roomUser) => {
+      if (
+        roomUser.user.id === useRoomStore.getState().currentRoomUser?.user.id
+      ) {
+        void fetchCurrentRoomUser(id as string, true);
       }
-    );
+    });
 
     subscribe<{ userId: number; isHandRaised: boolean }>(
       "set_hand_raised",

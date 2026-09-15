@@ -8,12 +8,16 @@ import { Spinner } from "@/components/ui/spinner";
 import type { ApiPaginatedResponse, QueryParams } from "@/lib/api/types";
 
 interface InfiniteScrollProps<T> {
-  fetcher: (
+  fetcher?: (
     page: number,
     pageSize: number,
     params?: QueryParams,
     signal?: AbortSignal
   ) => Promise<ApiPaginatedResponse<T[]>>;
+  data?: T[];
+  hasMore?: boolean;
+  loading?: boolean;
+  onLoadMore?: () => void;
   params?: QueryParams;
   page?: number;
   pageSize?: number;
@@ -28,6 +32,10 @@ interface InfiniteScrollProps<T> {
 
 export function InfiniteScroll<T>({
   fetcher,
+  data,
+  hasMore: controlledHasMore,
+  loading,
+  onLoadMore,
   params,
   page = 1,
   pageSize = 10,
@@ -48,6 +56,7 @@ export function InfiniteScroll<T>({
   const serializedParams = JSON.stringify(params);
 
   const fetchItems = async (pageToFetch: number) => {
+    if (!fetcher) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -75,6 +84,7 @@ export function InfiniteScroll<T>({
   };
 
   useEffect(() => {
+    if (!fetcher) return;
     setItems([]);
     setCurrentPage(page);
     setHasMore(true);
@@ -82,31 +92,36 @@ export function InfiniteScroll<T>({
     return () => abortRef.current?.abort();
   }, [serializedParams, page]);
 
+  const displayedItems = data ?? items;
+  const moreAvailable = controlledHasMore ?? hasMore;
+  const loadingState = loading ?? isLoading;
   const loadMore = () => {
-    if (hasMore && !isLoading) fetchItems(currentPage);
+    if (!moreAvailable || loadingState) return;
+    if (onLoadMore) onLoadMore();
+    else fetchItems(currentPage);
   };
 
   const Footer = useCallback(
     () =>
-      isLoading ? (
+      loadingState ? (
         <div className="py-8 flex justify-center">
           <Spinner className="size-8" />
         </div>
       ) : null,
-    [isLoading]
+    [loadingState]
   );
 
-  if (items.length === 0 && isLoading) {
+  if (displayedItems.length === 0 && loadingState) {
     return <>{loader ?? <Loader />}</>;
   }
 
-  if (items.length === 0 && !hasMore) {
+  if (displayedItems.length === 0 && !moreAvailable) {
     return <>{emptyPlaceholder}</>;
   }
 
   return (
     <VirtuosoGrid<T>
-      data={items}
+      data={displayedItems}
       useWindowScroll={useWindowScroll}
       style={style}
       endReached={loadMore}

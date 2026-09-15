@@ -11,13 +11,6 @@ import {
 } from "@/components/filter-dropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious
-} from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Drawer,
@@ -27,13 +20,16 @@ import {
   DrawerHeader,
   DrawerTitle
 } from "@/components/ui/drawer";
+import { InfiniteScroll } from "@/components/infinite-scroll";
+import { Spinner } from "@/components/ui/spinner";
 import { useRoomUsers } from "@/hooks/useRoomUsers";
+import { useBlockedRoomUsers } from "@/hooks/useBlockedRoomUsers";
 import useRoomStore from "@/store/useRoomStore";
 import { useShallow } from "zustand/react/shallow";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { ApiError } from "@/lib/api";
 import { ALL_ROLES, DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
-import { capitalize, cn } from "@/lib/utils";
+import { capitalize } from "@/lib/utils";
 import { RoomUserRole, RoomUserType, UserType } from "@/lib/api/types";
 import UserActionsMenu, { UserAction } from "@/components/user-action-menu";
 
@@ -119,7 +115,6 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
   const [selectedFilters, setSelectedFilters] = useState<
     Record<string, string[]>
   >({});
-
   const roles = (
     selectedFilters.roles?.length ? selectedFilters.roles : ALL_ROLES
   ) as RoomUserRole[];
@@ -128,16 +123,7 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
     : undefined;
   const activeFilterCount = countActiveFilters(selectedFilters);
 
-  const {
-    users,
-    isLoading,
-    count,
-    page,
-    totalPages,
-    nextPage,
-    prevPage,
-    refetch
-  } = useRoomUsers({
+  const { users, isLoading, count, hasMore, nextPage, refetch } = useRoomUsers({
     roomId,
     roles,
     isOnline,
@@ -150,14 +136,11 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
     users: blockedUsers,
     isLoading: isBlockedLoading,
     count: blockedCount,
-    page: blockedPage,
-    totalPages: blockedTotalPages,
+    hasMore: blockedHasMore,
     nextPage: nextBlockedPage,
-    prevPage: prevBlockedPage,
     refetch: refetchBlocked
-  } = useRoomUsers({
+  } = useBlockedRoomUsers({
     roomId,
-    blocked: true,
     query: activeTab === "blocked" ? searchQuery || undefined : undefined,
     pageSize: 20,
     enabled: open && !!currentRoomUser?.isAdmin
@@ -200,12 +183,6 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
       );
     }
   };
-
-  const currentPage = activeTab === "active" ? page : blockedPage;
-  const currentTotalPages =
-    activeTab === "active" ? totalPages : blockedTotalPages;
-  const onPrevPage = activeTab === "active" ? prevPage : prevBlockedPage;
-  const onNextPage = activeTab === "active" ? nextPage : nextBlockedPage;
 
   const filterTrigger = (
     <Button variant="glass" className="gap-2 hover:cursor-pointer">
@@ -288,110 +265,83 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
             )}
           </div>
 
-          <TabsContent
-            value="active"
-            className="flex-1 min-h-0 overflow-y-auto px-6 pb-6"
-          >
-            <div className="divide-y divide-border/50">
-              {isLoading ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Loading...
-                </p>
-              ) : users.length === 0 ? (
+          <TabsContent value="active" className="flex-1 min-h-0 px-6 pb-6">
+            <InfiniteScroll<RoomUserType>
+              data={users}
+              hasMore={hasMore}
+              loading={isLoading}
+              onLoadMore={nextPage}
+              useWindowScroll={false}
+              style={{ height: "100%" }}
+              className="divide-y divide-border/50"
+              loader={
+                <div className="flex justify-center py-16">
+                  <Spinner className="size-8" />
+                </div>
+              }
+              emptyPlaceholder={
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   No users found
                 </p>
-              ) : (
-                users.map((roomUser) => (
-                  <UserRow
-                    key={roomUser.id}
-                    user={roomUser.user}
-                    subtitle={roomUser.role.name}
-                    role={roomUser.role.name as RoomUserRole}
-                    isOnline={roomUser.isOnline}
-                    actions={
-                      <UserActionsMenu
-                        roomUser={roomUser}
-                        currentRoomUser={currentRoomUser}
-                        onAction={(action) =>
-                          handleUserAction(roomUser, action)
-                        }
-                      />
-                    }
-                  />
-                ))
+              }
+            >
+              {(roomUser) => (
+                <UserRow
+                  user={roomUser.user}
+                  subtitle={roomUser.role.name}
+                  role={roomUser.role.name as RoomUserRole}
+                  isOnline={roomUser.isOnline}
+                  actions={
+                    <UserActionsMenu
+                      roomUser={roomUser}
+                      currentRoomUser={currentRoomUser}
+                      onAction={(action) => handleUserAction(roomUser, action)}
+                    />
+                  }
+                />
               )}
-            </div>
+            </InfiniteScroll>
           </TabsContent>
 
-          <TabsContent
-            value="blocked"
-            className="flex-1 min-h-0 overflow-y-auto px-6 pb-6"
-          >
-            <div className="divide-y divide-border/50">
-              {isBlockedLoading ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Loading...
-                </p>
-              ) : blockedUsers.length === 0 ? (
+          <TabsContent value="blocked" className="flex-1 min-h-0 px-6 pb-6">
+            <InfiniteScroll<UserType>
+              data={blockedUsers}
+              hasMore={blockedHasMore}
+              loading={isBlockedLoading}
+              onLoadMore={nextBlockedPage}
+              useWindowScroll={false}
+              style={{ height: "100%" }}
+              className="divide-y divide-border/50"
+              loader={
+                <div className="flex justify-center py-16">
+                  <Spinner className="size-8" />
+                </div>
+              }
+              emptyPlaceholder={
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   No blocked users
                 </p>
-              ) : (
-                blockedUsers.map((user) => (
-                  <UserRow
-                    key={user.id}
-                    user={user}
-                    subtitle="Blocked"
-                    actions={
-                      <Button
-                        variant="glass"
-                        size="xs"
-                        className="hover:cursor-pointer shrink-0"
-                        onClick={() => handleUnblock(user.id)}
-                      >
-                        Unblock
-                      </Button>
-                    }
-                  />
-                ))
+              }
+            >
+              {(user) => (
+                <UserRow
+                  user={user}
+                  subtitle="Blocked"
+                  actions={
+                    <Button
+                      variant="glass"
+                      size="xs"
+                      className="hover:cursor-pointer shrink-0"
+                      onClick={() => handleUnblock(user.id)}
+                    >
+                      Unblock
+                    </Button>
+                  }
+                />
               )}
-            </div>
+            </InfiniteScroll>
           </TabsContent>
         </Tabs>
-
-        {currentTotalPages > 1 && (
-          <Pagination className="px-6 py-4 border-t border-border/50 shrink-0">
-            <PaginationContent className="w-full justify-between">
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={onPrevPage}
-                  aria-disabled={currentPage <= 1}
-                  className={cn(
-                    "hover:cursor-pointer",
-                    currentPage <= 1 && "pointer-events-none opacity-50"
-                  )}
-                />
-              </PaginationItem>
-              <PaginationItem>
-                <span className="text-sm text-muted-foreground px-2">
-                  Page {currentPage} of {currentTotalPages}
-                </span>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  onClick={onNextPage}
-                  aria-disabled={currentPage >= currentTotalPages}
-                  className={cn(
-                    "hover:cursor-pointer",
-                    currentPage >= currentTotalPages &&
-                      "pointer-events-none opacity-50"
-                  )}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
       </DrawerContent>
     </Drawer>
   );

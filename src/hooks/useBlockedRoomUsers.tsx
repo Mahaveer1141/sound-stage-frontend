@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { roomApi } from "@/lib/api/endpoints/room";
-import { RoomUserRole, RoomUserType } from "@/lib/api/types";
+import { UserType } from "@/lib/api/types";
 import { toast } from "sonner";
+import { DEFAULT_PAGE } from "@/lib/constants";
 
-interface UseRoomUsersOptions {
+interface UseBlockedRoomUsersOptions {
   roomId: string;
-  roles?: RoomUserRole[];
-  isOnline?: boolean;
   query?: string;
   pageSize?: number;
   enabled?: boolean;
 }
 
-interface UseRoomUsersResult {
-  users: RoomUserType[];
+interface UseBlockedRoomUsersResult {
+  users: UserType[];
   count: number;
   hasMore: boolean;
   isLoading: boolean;
@@ -21,24 +20,26 @@ interface UseRoomUsersResult {
   refetch: (silent?: boolean, force?: boolean) => void;
 }
 
-export function useRoomUsers({
+export function useBlockedRoomUsers({
   roomId,
-  roles,
-  isOnline,
   query,
   pageSize = 20,
   enabled = true
-}: UseRoomUsersOptions): UseRoomUsersResult {
-  const [users, setUsers] = useState<RoomUserType[]>([]);
-  const [nextCursor, setNextCursor] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
+}: UseBlockedRoomUsersOptions): UseBlockedRoomUsersResult {
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
-  const filtersKey = JSON.stringify({ roles, isOnline, query });
+  const filtersKey = JSON.stringify({ query });
 
-  const fetchUsers = async (cursor: number, silent = false, force = false) => {
+  const fetchUsers = async (
+    targetPage: number,
+    silent = false,
+    force = false
+  ) => {
     if (!roomId || (!enabled && !force)) return;
 
     abortRef.current?.abort();
@@ -47,25 +48,29 @@ export function useRoomUsers({
 
     if (!silent) setIsLoading(true);
     try {
-      const res = await roomApi.usersList(
+      const res = await roomApi.blockedUsersList(
         roomId,
-        { roles, isOnline, query, cursor, limit: pageSize },
+        { query, page: targetPage, pageSize },
         controller.signal
       );
-      setUsers((prev) => (cursor === 0 ? res.data : [...prev, ...res.data]));
+      setUsers((prev) =>
+        targetPage === DEFAULT_PAGE ? res.data : [...prev, ...res.data]
+      );
+      setTotalPages(res.pagination.totalPages);
       setCount(res.pagination.totalCount);
-      setNextCursor(res.pagination.nextCursor);
-      setHasMore(res.pagination.hasMore);
+      setPage(targetPage);
     } catch {
       if (controller.signal.aborted) return;
-      toast.error("Failed to fetch users");
+      toast.error("Failed to fetch blocked users");
     } finally {
       if (!controller.signal.aborted) setIsLoading(false);
     }
   };
 
+  const hasMore = page < totalPages;
+
   useEffect(() => {
-    fetchUsers(0);
+    fetchUsers(DEFAULT_PAGE);
     return () => abortRef.current?.abort();
   }, [enabled, filtersKey]);
 
@@ -74,7 +79,8 @@ export function useRoomUsers({
     count,
     hasMore,
     isLoading,
-    nextPage: () => hasMore && fetchUsers(nextCursor),
-    refetch: (silent = false, force = false) => fetchUsers(0, silent, force)
+    nextPage: () => hasMore && fetchUsers(page + 1),
+    refetch: (silent = false, force = false) =>
+      fetchUsers(DEFAULT_PAGE, silent, force)
   };
 }
