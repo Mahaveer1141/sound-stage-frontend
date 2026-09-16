@@ -15,13 +15,14 @@ interface UseRoomUsersOptions {
 interface UseRoomUsersResult {
   users: RoomUserType[];
   count: number;
+  setCount: (count: number) => void;
   hasMore: boolean;
   isLoading: boolean;
   nextPage: () => void;
   backfill: (timeoutSeconds?: number) => void;
   insert: (roomUser: RoomUserType) => void;
   removeByUserId: (userId: number) => void;
-  refetch: (silent?: boolean, force?: boolean) => void;
+  refetch: (silent?: boolean, force?: boolean) => Promise<void>;
 }
 
 const cursorOf = (u: RoomUserType) => `${u.lastJoinedAt}_${u.id}`;
@@ -138,6 +139,7 @@ export function useRoomUsers({
   return {
     users,
     count,
+    setCount,
     hasMore,
     isLoading,
     nextPage: () => hasMoreRef.current && fetchUsers(nextCursorRef.current),
@@ -157,7 +159,6 @@ export function useRoomUsers({
       const result = insertWindowUser(usersRef.current, roomUser, pageSize);
       usersRef.current = result.users;
       setUsers(result.users);
-      if (result.inserted) setCount((c) => c + 1);
       if (result.cursor) {
         nextCursorRef.current = result.cursor;
         setNextCursor(result.cursor);
@@ -166,11 +167,9 @@ export function useRoomUsers({
     },
 
     removeByUserId: (userId) => {
-      const exists = usersRef.current.some((u) => u.user.id === userId);
       const updated = usersRef.current.filter((u) => u.user.id !== userId);
       usersRef.current = updated;
       setUsers(updated);
-      if (exists) setCount((c) => Math.max(0, c - 1));
     },
     refetch: (silent = false, force = false) => fetchUsers("", silent, force)
   };

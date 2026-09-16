@@ -4,6 +4,7 @@ import { EventType, WsMessageHandler, WsEventHandler } from "./types";
 class WsClient {
   private baseUrl: string;
   private socket: WebSocket | null = null;
+  private path = "";
   private messageHandlers: Map<EventType, Set<WsMessageHandler<any>>> =
     new Map();
   private eventHandlers: {
@@ -23,11 +24,15 @@ class WsClient {
   connect(path: string, isRetry = false): Promise<void> {
     if (
       this.socket &&
+      this.path === path &&
       (this.socket.readyState === WebSocket.CONNECTING ||
         this.socket.readyState === WebSocket.OPEN)
     ) {
       return Promise.resolve();
     }
+
+    this.disconnect();
+    this.path = path;
 
     return new Promise((resolve, reject) => {
       try {

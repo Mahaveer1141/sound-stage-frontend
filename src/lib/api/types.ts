@@ -180,10 +180,29 @@ export type WsErrorPayloadType = {
   message: string;
   code: number;
 };
+
+export interface RoomUserCountsType {
+  totalUsersCount: number;
+  online: {
+    listenerCount: number;
+    speakerCount: number;
+  };
+}
+
+export interface RoomUserEventType extends RoomUserCountsType {
+  roomUser: RoomUserType;
+}
+
+export interface RoomUserLeftEventType extends RoomUserCountsType {
+  userId: number;
+  canSpeak: boolean;
+}
+
 export type EventType =
   | "join_room"
   | "join_stream"
   | "leave_room"
+  | "user_kicked_out"
   | "room_deleted"
   | "webrtc_offer"
   | "webrtc_answer"
@@ -192,4 +211,5 @@ export type EventType =
   | "user_role_updated"
   | "set_hand_raised"
   | "chat_message"
+  | "chat_enabled_updated"
   | "error";

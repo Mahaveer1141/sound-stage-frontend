@@ -45,7 +45,12 @@ import Loader from "@/components/loader";
 import RaisedHandsDrawer from "@/components/raised-hands-drawer";
 import RoomUsersDrawer from "@/components/room-users-drawer";
 import ChatPanel from "@/components/chat-panel";
-import { RoomUserType, WsErrorPayloadType } from "@/lib/api/types";
+import {
+  RoomUserCountsType,
+  RoomUserEventType,
+  RoomUserLeftEventType,
+  WsErrorPayloadType
+} from "@/lib/api/types";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { ApiError } from "@/lib/api";
 import { DEFAULT_ROOM_LOGO } from "@/lib/constants";
@@ -87,6 +92,7 @@ const Room = () => {
     setRaisedHandsOpen,
     setUsersDrawerOpen,
     setChatOpen,
+    setTotalUsers,
     reset
   } = useRoomStore(
     useShallow((s) => ({
@@ -106,6 +112,7 @@ const Room = () => {
       setRaisedHandsOpen: s.setRaisedHandsOpen,
       setUsersDrawerOpen: s.setUsersDrawerOpen,
       setChatOpen: s.setChatOpen,
+      setTotalUsers: s.setTotalUsers,
       reset: s.reset
     }))
   );
@@ -119,6 +126,7 @@ const Room = () => {
     users: speakers,
     isLoading: isSpeakersLoading,
     count: speakerCount,
+    setCount: setSpeakerCount,
     insert: insertSpeaker,
     removeByUserId: removeSpeaker,
     backfill: backfillSpeakers
@@ -133,6 +141,7 @@ const Room = () => {
     users: listeners,
     isLoading: isListenersLoading,
     count: listenerCount,
+    setCount: setListenerCount,
     insert: insertListener,
     removeByUserId: removeListener,
     backfill: backfillListeners
@@ -206,8 +215,8 @@ const Room = () => {
   useEffect(() => {
     if (!hasJoined) return;
 
-    onConnect(() => {
-      send("join_room", {});
+    return onConnect(() => {
+      send("join_stream", {});
     });
   }, [hasJoined]);
 
@@ -218,56 +227,112 @@ const Room = () => {
   }, [hasJoined, id]);
 
   useEffect(() => {
-    subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
-      console.error("Ws Error: ", ws_error);
-    });
+    const applyCounts = (counts: RoomUserCountsType) => {
+      setTotalUsers(counts.totalUsersCount);
+      setSpeakerCount(counts.online.speakerCount);
+      setListenerCount(counts.online.listenerCount);
+    };
 
-    subscribe("join_room", () => {
-      refetchListeners();
-      refetchSpeakers();
-    });
-
-    subscribe("leave_room", () => {
-      refetchListeners();
-      refetchSpeakers();
-    });
-
-    subscribe<RoomUserType>("user_role_updated", (roomUser) => {
-      if (
-        roomUser.user.id === useRoomStore.getState().currentRoomUser?.user.id
-      ) {
-        void fetchCurrentRoomUser(id as string, true);
-      }
-
-      if (roomUser.canSpeak) {
-        removeListener(roomUser.user.id);
-        insertSpeaker(roomUser);
-        backfillListeners();
+    const onUserRemoved = ({
+      userId,
+      canSpeak,
+      ...counts
+    }: RoomUserLeftEventType) => {
+      applyCounts(counts);
+      if (canSpeak) {
+        removeSpeaker(userId);
+        backfillSpeakers(5000);
       } else {
-        removeSpeaker(roomUser.user.id);
-        insertListener(roomUser);
-        backfillSpeakers();
+        removeListener(userId);
+        backfillListeners(5000);
       }
-    });
+    };
 
-    subscribe<{ userId: number; isHandRaised: boolean }>(
-      "set_hand_raised",
-      (state) => {
-        applyHandRaisedEvent(state.isHandRaised);
-      }
-    );
+    const unsubscribes = [
+      subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
+        console.error("Ws Error: ", ws_error);
+      }),
 
-    subscribe("room_deleted", () => {
-      toast.error("This room was deleted by the owner");
-      disconnect();
-      router.push("/rooms");
-    });
+      subscribe<RoomUserEventType>("join_room", ({ roomUser, ...counts }) => {
+        applyCounts(counts);
+        if (roomUser.canSpeak) {
+          insertSpeaker(roomUser);
+        } else {
+          insertListener(roomUser);
+        }
+      }),
+
+      subscribe<RoomUserLeftEventType>("leave_room", onUserRemoved),
+
+      subscribe<RoomUserLeftEventType>("user_kicked_out", (payload) => {
+        if (
+          payload.userId === useRoomStore.getState().currentRoomUser?.user.id
+        ) {
+          toast.info("You have left the room");
+          disconnect();
+          router.push("/rooms");
+          return;
+        }
+        onUserRemoved(payload);
+      }),
+
+      subscribe<RoomUserEventType>(
+        "user_role_updated",
+        ({ roomUser, ...counts }) => {
+          applyCounts(counts);
+
+          if (
+            roomUser.user.id ===
+            useRoomStore.getState().currentRoomUser?.user.id
+          ) {
+            void fetchCurrentRoomUser(id as string, true);
+          }
+
+          if (roomUser.canSpeak) {
+            removeListener(roomUser.user.id);
+            insertSpeaker(roomUser);
+            backfillListeners(5000);
+          } else {
+            removeSpeaker(roomUser.user.id);
+            insertListener(roomUser);
+            backfillSpeakers(5000);
+          }
+        }
+      ),
+
+      subscribe<{ userId: number; isHandRaised: boolean }>(
+        "set_hand_raised",
+        (state) => {
+          applyHandRaisedEvent(state.isHandRaised);
+        }
+      ),
+
+      subscribe("room_deleted", () => {
+        toast.error("This room was deleted by the owner");
+        disconnect();
+        router.push("/rooms");
+      }),
+
+      subscribe<{ isChatEnabled: boolean }>(
+        "chat_enabled_updated",
+        (payload) => {
+          setChatOpen(false);
+          useRoomStore.setState((state) => ({
+            ...state,
+            room: state.room
+              ? { ...state.room, isChatEnabled: payload.isChatEnabled }
+              : state.room
+          }));
+        }
+      )
+    ];
 
     return () => {
+      unsubscribes.forEach((unsubscribe) => unsubscribe());
       if (!useConnectionStore.getState().isConnected) return;
       send("leave_room", {});
     };
-  }, []);
+  }, [id]);
 
   if (
     isUserLoading ||

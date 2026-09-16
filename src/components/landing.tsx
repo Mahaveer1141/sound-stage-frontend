@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import FloatingOrbs from "@/components/floating-orbs";
-import AudioWave from "@/components/audio-wave";
 import { ArrowRight, Mic, Users, Shield, Zap } from "lucide-react";
 
 const Landing = () => {

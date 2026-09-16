@@ -30,6 +30,7 @@ interface RoomStoreActions {
   setRaisingHand: (isRaising: boolean) => void;
   applyHandRaisedEvent: (isHandRaised: boolean) => void;
   setRaisedHandsCount: (count: number) => void;
+  setTotalUsers: (count: number) => void;
   setRaisedHandsOpen: (open: boolean) => void;
   setUsersDrawerOpen: (open: boolean) => void;
   setChatOpen: (open: boolean) => void;
@@ -134,6 +135,9 @@ const useRoomStore = create<RoomStore>((set, get) => ({
     })),
 
   setRaisedHandsCount: (raisedHandsCount) => set({ raisedHandsCount }),
+
+  setTotalUsers: (totalUsers) =>
+    set((s) => ({ room: s.room ? { ...s.room, totalUsers } : s.room })),
   setRaisedHandsOpen: (isRaisedHandsOpen) => set({ isRaisedHandsOpen }),
   setUsersDrawerOpen: (isUsersDrawerOpen) => set({ isUsersDrawerOpen }),
   setChatOpen: (isChatOpen) => set({ isChatOpen }),

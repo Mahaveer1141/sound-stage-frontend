@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Filter, Search, Users, X } from "lucide-react";
+import { Filter, RefreshCw, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   FilterDropdown,
@@ -12,6 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import {
   Drawer,
   DrawerClose,
@@ -29,7 +34,7 @@ import { useShallow } from "zustand/react/shallow";
 import { roomApi } from "@/lib/api/endpoints/room";
 import { ApiError } from "@/lib/api";
 import { ALL_ROLES, DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
-import { capitalize } from "@/lib/utils";
+import { capitalize, cn } from "@/lib/utils";
 import { RoomUserRole, RoomUserType, UserType } from "@/lib/api/types";
 import UserActionsMenu, { UserAction } from "@/components/user-action-menu";
 
@@ -112,6 +117,7 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
   );
   const [activeTab, setActiveTab] = useState<Tab>("active");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<
     Record<string, string[]>
   >({});
@@ -181,6 +187,15 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
       toast.error(
         error instanceof ApiError ? error.message : "Failed to unblock user"
       );
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetch(true), refetchBlocked(true)]);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -255,6 +270,22 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
                 className="pl-9 glass border-border/50 focus:border-primary"
               />
             </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="glass"
+                  size="icon"
+                  className="hover:cursor-pointer shrink-0"
+                  disabled={isRefreshing}
+                  onClick={handleRefresh}
+                >
+                  <RefreshCw
+                    className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh users</TooltipContent>
+            </Tooltip>
             {activeTab === "active" && (
               <FilterDropdown
                 filters={USER_FILTERS}

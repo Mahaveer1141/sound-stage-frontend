@@ -17,7 +17,7 @@ interface UseBlockedRoomUsersResult {
   hasMore: boolean;
   isLoading: boolean;
   nextPage: () => void;
-  refetch: (silent?: boolean, force?: boolean) => void;
+  refetch: (silent?: boolean, force?: boolean) => Promise<void>;
 }
 
 export function useBlockedRoomUsers({
