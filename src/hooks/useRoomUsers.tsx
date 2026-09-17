@@ -21,6 +21,7 @@ interface UseRoomUsersResult {
   nextPage: () => void;
   backfill: (timeoutSeconds?: number) => void;
   insert: (roomUser: RoomUserType) => void;
+  updateByUserId: (userId: number, patch: Partial<RoomUserType>) => void;
   removeByUserId: (userId: number) => void;
   refetch: (silent?: boolean, force?: boolean) => Promise<void>;
 }
@@ -164,6 +165,15 @@ export function useRoomUsers({
         setNextCursor(result.cursor);
       }
       if (result.dropped) setHasMore(true);
+    },
+
+    updateByUserId: (userId, patch) => {
+      if (!usersRef.current.some((u) => u.user.id === userId)) return;
+      const updated = usersRef.current.map((u) =>
+        u.user.id === userId ? { ...u, ...patch } : u
+      );
+      usersRef.current = updated;
+      setUsers(updated);
     },
 
     removeByUserId: (userId) => {

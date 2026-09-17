@@ -46,6 +46,8 @@ import RaisedHandsDrawer from "@/components/raised-hands-drawer";
 import RoomUsersDrawer from "@/components/room-users-drawer";
 import ChatPanel from "@/components/chat-panel";
 import {
+  HandRaisedEventType,
+  UserParticipationType,
   RoomUserCountsType,
   RoomUserEventType,
   RoomUserLeftEventType,
@@ -128,6 +130,7 @@ const Room = () => {
     count: speakerCount,
     setCount: setSpeakerCount,
     insert: insertSpeaker,
+    updateByUserId: updateSpeaker,
     removeByUserId: removeSpeaker,
     backfill: backfillSpeakers
   } = useRoomUsers({
@@ -143,6 +146,7 @@ const Room = () => {
     count: listenerCount,
     setCount: setListenerCount,
     insert: insertListener,
+    updateByUserId: updateListener,
     removeByUserId: removeListener,
     backfill: backfillListeners
   } = useRoomUsers({
@@ -152,11 +156,12 @@ const Room = () => {
     pageSize: 20,
     enabled: hasJoined
   });
-  const { isMuted, toggleMute, remoteStream } = useWebRTC({
+  const { toggleMute, remoteStream } = useWebRTC({
     send,
     subscribe,
     enabled: isConnected,
-    canSpeak: currentRoomUser?.canSpeak
+    canSpeak: currentRoomUser?.canSpeak,
+    isMuted: currentRoomUser?.isMuted
   });
 
   const handleLeave = () => {
@@ -248,6 +253,21 @@ const Room = () => {
       }
     };
 
+    const applyParticipationState = (event: UserParticipationType) => {
+      const patch = {
+        isMuted: event.isMuted,
+        isHandRaised: event.isHandRaised
+      };
+      updateSpeaker(event.userId, patch);
+      updateListener(event.userId, patch);
+      useRoomStore.setState((state) => ({
+        currentRoomUser:
+          state.currentRoomUser?.user.id === event.userId
+            ? { ...state.currentRoomUser, ...patch }
+            : state.currentRoomUser
+      }));
+    };
+
     const unsubscribes = [
       subscribe<WsErrorPayloadType>("error", (ws_error: WsErrorPayloadType) => {
         console.error("Ws Error: ", ws_error);
@@ -300,12 +320,12 @@ const Room = () => {
         }
       ),
 
-      subscribe<{ userId: number; isHandRaised: boolean }>(
-        "set_hand_raised",
-        (state) => {
-          applyHandRaisedEvent(state.isHandRaised);
-        }
-      ),
+      subscribe<HandRaisedEventType>("set_hand_raised", (event) => {
+        applyHandRaisedEvent(event);
+        applyParticipationState(event);
+      }),
+
+      subscribe<UserParticipationType>("set_muted", applyParticipationState),
 
       subscribe("room_deleted", () => {
         toast.error("This room was deleted by the owner");
@@ -469,11 +489,6 @@ const Room = () => {
                 <ParticipantAvatar
                   key={speaker.id}
                   roomUser={speaker}
-                  isMuted={
-                    speaker.user.id === currentRoomUser?.user.id
-                      ? isMuted
-                      : false
-                  }
                   size="lg"
                 />
               ))}
@@ -497,11 +512,6 @@ const Room = () => {
                 <ParticipantAvatar
                   key={listener.id}
                   roomUser={listener}
-                  isMuted={
-                    listener.user.id === currentRoomUser?.user.id
-                      ? isMuted
-                      : false
-                  }
                   size="lg"
                 />
               ))}
@@ -542,12 +552,16 @@ const Room = () => {
               </Button>
 
               <Button
-                variant={isMuted ? "glass" : "glow"}
+                variant={
+                  !currentRoomUser?.canSpeak || currentRoomUser?.isMuted
+                    ? "glass"
+                    : "glow"
+                }
                 size="icon"
                 onClick={() => toggleMute()}
                 className="w-14 h-14"
               >
-                {isMuted ? (
+                {!currentRoomUser?.canSpeak || currentRoomUser?.isMuted ? (
                   <MicOff className="w-6 h-6" />
                 ) : (
                   <Mic className="w-6 h-6" />

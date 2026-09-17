@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Filter, RefreshCw, Search, Users, X } from "lucide-react";
+import { Filter, Hand, Mic, RefreshCw, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   FilterDropdown,
@@ -66,10 +66,20 @@ interface UserRowProps {
   subtitle: string;
   role?: RoomUserRole;
   isOnline?: boolean;
+  isSpeaking?: boolean;
+  isHandRaised?: boolean;
   actions?: React.ReactNode;
 }
 
-const UserRow = ({ user, subtitle, role, isOnline, actions }: UserRowProps) => {
+const UserRow = ({
+  user,
+  subtitle,
+  role,
+  isOnline,
+  isSpeaking,
+  isHandRaised,
+  actions
+}: UserRowProps) => {
   const avatar = user.profilePicture?.url || DEFAULT_USER_AVATAR;
   const RoleIcon = role ? ROLE_ICONS[role] : undefined;
 
@@ -91,6 +101,8 @@ const UserRow = ({ user, subtitle, role, isOnline, actions }: UserRowProps) => {
         <p className="text-sm font-medium truncate flex items-center gap-1.5">
           {user.fullName}
           {RoleIcon && <RoleIcon className="w-3.5 h-3.5 text-primary" />}
+          {isSpeaking && <Mic className="w-3.5 h-3.5 text-primary" />}
+          {isHandRaised && <Hand className="w-3.5 h-3.5 text-accent" />}
         </p>
         <p className="text-xs text-muted-foreground capitalize">{subtitle}</p>
       </div>
@@ -322,6 +334,8 @@ const RoomUsersDrawer = ({ roomId }: RoomUsersDrawerProps) => {
                   subtitle={roomUser.role.name}
                   role={roomUser.role.name as RoomUserRole}
                   isOnline={roomUser.isOnline}
+                  isSpeaking={!roomUser.isMuted}
+                  isHandRaised={roomUser.isHandRaised}
                   actions={
                     <UserActionsMenu
                       roomUser={roomUser}

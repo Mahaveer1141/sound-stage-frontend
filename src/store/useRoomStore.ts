@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { roomApi } from "@/lib/api/endpoints/room";
-import { RoomType, RoomUserType } from "@/lib/api/types";
+import { HandRaisedEventType, RoomType, RoomUserType } from "@/lib/api/types";
 
 interface RoomStoreState {
   room: RoomType | null;
@@ -11,8 +11,12 @@ interface RoomStoreState {
   isRoomLoading: boolean;
   isCurrentRoomUserLoading: boolean;
   isRaisingHand: boolean;
+  raisedHands: RoomUserType[];
+  raisedHandsPage: number;
+  raisedHandsHasMore: boolean;
+  isRaisedHandsLoading: boolean;
   raisedHandsCount: number;
-  raisedHandsVersion: number;
+  raisedHandsResetKey: number;
   isRaisedHandsOpen: boolean;
   isUsersDrawerOpen: boolean;
   isChatOpen: boolean;
@@ -25,10 +29,12 @@ interface RoomStoreActions {
     silent?: boolean
   ) => Promise<RoomUserType | null>;
   fetchRaisedHandsCount: (roomId: string) => Promise<void>;
+  fetchRaisedHands: (roomId: string, page?: number) => Promise<void>;
+  fetchNextRaisedHandsPage: (roomId: string) => Promise<void>;
   joinRoom: (roomId: string, privateCode?: string) => Promise<boolean>;
   promoteToSpeaker: (roomId: string, userId: number) => Promise<void>;
   setRaisingHand: (isRaising: boolean) => void;
-  applyHandRaisedEvent: (isHandRaised: boolean) => void;
+  applyHandRaisedEvent: (event: HandRaisedEventType) => void;
   setRaisedHandsCount: (count: number) => void;
   setTotalUsers: (count: number) => void;
   setRaisedHandsOpen: (open: boolean) => void;
@@ -46,8 +52,12 @@ const initialState: RoomStoreState = {
   isRoomLoading: false,
   isCurrentRoomUserLoading: false,
   isRaisingHand: false,
+  raisedHands: [],
+  raisedHandsPage: 1,
+  raisedHandsHasMore: true,
+  isRaisedHandsLoading: false,
   raisedHandsCount: 0,
-  raisedHandsVersion: 0,
+  raisedHandsResetKey: 0,
   isRaisedHandsOpen: false,
   isUsersDrawerOpen: false,
   isChatOpen: false
@@ -98,6 +108,40 @@ const useRoomStore = create<RoomStore>((set, get) => ({
     }
   },
 
+  fetchRaisedHands: async (roomId, page = 1) => {
+    set({ isRaisedHandsLoading: true });
+    try {
+      const res = await roomApi.raisedHandsList(roomId, {
+        page,
+        pageSize: 20
+      });
+      set((s) => ({
+        raisedHands:
+          page === 1
+            ? res.data
+            : [
+                ...s.raisedHands,
+                ...res.data.filter(
+                  (u) => !s.raisedHands.some((e) => e.user.id === u.user.id)
+                )
+              ],
+        raisedHandsPage: page,
+        raisedHandsHasMore: page < res.pagination.totalPages,
+        raisedHandsCount: res.pagination.totalCount
+      }));
+    } catch {
+      toast.error("Failed to fetch raised hands");
+    } finally {
+      set({ isRaisedHandsLoading: false });
+    }
+  },
+
+  fetchNextRaisedHandsPage: async (roomId) => {
+    const { raisedHandsHasMore, isRaisedHandsLoading, raisedHandsPage } = get();
+    if (!raisedHandsHasMore || isRaisedHandsLoading) return;
+    await get().fetchRaisedHands(roomId, raisedHandsPage + 1);
+  },
+
   joinRoom: async (roomId, privateCode = "") => {
     if (get().hasJoined) return true;
 
@@ -116,8 +160,12 @@ const useRoomStore = create<RoomStore>((set, get) => ({
 
   promoteToSpeaker: async (roomId, userId) => {
     try {
-      await roomApi.updateUserRole(roomId, userId, "speaker");
-      set((s) => ({ raisedHandsVersion: s.raisedHandsVersion + 1 }));
+      const res = await roomApi.updateUserRole(roomId, userId, "speaker");
+      set((s) => ({
+        raisedHands: s.raisedHands.map((u) =>
+          u.user.id === userId ? res.data : u
+        )
+      }));
     } catch {
       toast.error("Failed to update user role");
     }
@@ -125,20 +173,42 @@ const useRoomStore = create<RoomStore>((set, get) => ({
 
   setRaisingHand: (isRaisingHand) => set({ isRaisingHand }),
 
-  applyHandRaisedEvent: (isHandRaised) =>
+  applyHandRaisedEvent: ({ userId, isHandRaised, roomUser }) => {
+    const { isRaisedHandsOpen, raisedHandsHasMore, room } = get();
+    const shouldReset =
+      !isHandRaised && isRaisedHandsOpen && raisedHandsHasMore;
     set((s) => ({
-      raisedHandsVersion: s.raisedHandsVersion + 1,
       raisedHandsCount: Math.max(
         0,
         s.raisedHandsCount + (isHandRaised ? 1 : -1)
-      )
-    })),
+      ),
+      raisedHands: isHandRaised
+        ? !s.raisedHandsHasMore &&
+          roomUser &&
+          !s.raisedHands.some((u) => u.user.id === userId)
+          ? [...s.raisedHands, roomUser]
+          : s.raisedHands
+        : s.raisedHands.filter((u) => u.user.id !== userId),
+      raisedHandsResetKey: shouldReset
+        ? s.raisedHandsResetKey + 1
+        : s.raisedHandsResetKey
+    }));
+    if (shouldReset && room) {
+      void get().fetchRaisedHands(String(room.id), 1);
+    }
+  },
 
   setRaisedHandsCount: (raisedHandsCount) => set({ raisedHandsCount }),
 
   setTotalUsers: (totalUsers) =>
     set((s) => ({ room: s.room ? { ...s.room, totalUsers } : s.room })),
-  setRaisedHandsOpen: (isRaisedHandsOpen) => set({ isRaisedHandsOpen }),
+  setRaisedHandsOpen: (isRaisedHandsOpen) => {
+    set({ isRaisedHandsOpen });
+    const roomId = get().room?.id;
+    if (isRaisedHandsOpen && roomId) {
+      void get().fetchRaisedHands(String(roomId), 1);
+    }
+  },
   setUsersDrawerOpen: (isUsersDrawerOpen) => set({ isUsersDrawerOpen }),
   setChatOpen: (isChatOpen) => set({ isChatOpen }),
 

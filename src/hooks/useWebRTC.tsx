@@ -2,29 +2,34 @@
 
 import { EventType, WsMessageHandler } from "@/lib/api/types";
 import { useEffect, useRef, useState } from "react";
-import useAudioStore from "@/store/useAudioStore";
-import { useShallow } from "zustand/react/shallow";
 
 interface UseWebRTCArgs {
   send: (event: EventType, payload: unknown) => void;
   subscribe: <T>(event: EventType, handler: WsMessageHandler<T>) => () => void;
   enabled: boolean;
   canSpeak: boolean | undefined;
+  isMuted: boolean | undefined;
 }
 
 export function useWebRTC({
   send,
   subscribe,
   enabled,
-  canSpeak = false
+  canSpeak = false,
+  isMuted = true
 }: UseWebRTCArgs) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mutedRef = useRef(isMuted);
 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const { isMuted, setMuted: setIsMuted } = useAudioStore(
-    useShallow((s) => ({ isMuted: s.isMuted, setMuted: s.setMuted }))
-  );
+
+  useEffect(() => {
+    mutedRef.current = isMuted;
+    streamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = !isMuted;
+    });
+  }, [isMuted]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -42,9 +47,8 @@ export function useWebRTC({
 
     pc.onnegotiationneeded = async () => {
       try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        send("webrtc_offer", offer);
+        await pc.setLocalDescription();
+        if (pc.localDescription) send("webrtc_offer", pc.localDescription);
       } catch (err) {
         console.error("Negotiation error:", err);
       }
@@ -53,7 +57,7 @@ export function useWebRTC({
     const unsubscribes = [
       subscribe<RTCSessionDescriptionInit>("webrtc_offer", async (offer) => {
         try {
-          if (pc.signalingState !== "stable") {
+          if (pc.signalingState === "have-local-offer") {
             await pc.setLocalDescription({ type: "rollback" });
           }
 
@@ -113,8 +117,17 @@ export function useWebRTC({
         }
 
         streamRef.current = stream;
-        stream.getAudioTracks().forEach((t) => (t.enabled = false));
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+        stream.getAudioTracks().forEach((track) => {
+          const applyMutedState = () => {
+            track.enabled = !mutedRef.current;
+          };
+          if (track.muted) {
+            track.addEventListener("unmute", applyMutedState, { once: true });
+          } else {
+            applyMutedState();
+          }
+        });
       } catch (error) {
         console.error("Error accessing media devices:", error);
       }
@@ -124,7 +137,6 @@ export function useWebRTC({
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-      setIsMuted(true);
 
       if (pc.signalingState !== "closed") {
         pc.getSenders().forEach((sender) => {
@@ -135,14 +147,16 @@ export function useWebRTC({
   }, [canSpeak, enabled]);
 
   const toggleMute = () => {
-    const track = streamRef.current?.getAudioTracks()[0];
-    if (!track) return;
+    if (!canSpeak) return;
 
-    track.enabled = !track.enabled;
-    setIsMuted(!track.enabled);
+    const nextMuted = !isMuted;
+    streamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = !nextMuted;
+    });
+    send("set_muted", { isMuted: nextMuted });
   };
 
-  return { remoteStream, isMuted, toggleMute };
+  return { remoteStream, toggleMute };
 }
 
 function buildIceServers(): RTCIceServer[] {

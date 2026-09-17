@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { Spinner } from "@/components/ui/spinner";
-import { roomApi } from "@/lib/api/endpoints/room";
 import { DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
 import type { RoomUserRole, RoomUserType } from "@/lib/api/types";
 import useRoomStore from "@/store/useRoomStore";
@@ -27,19 +26,25 @@ const RaisedHandsDrawer = ({ roomId }: RaisedHandsDrawerProps) => {
     isRaisedHandsOpen: open,
     setRaisedHandsOpen: onOpenChange,
     raisedHandsCount: raisedHandCount,
-    raisedHandsVersion: refreshKey,
+    raisedHandsResetKey,
+    raisedHands,
+    raisedHandsHasMore: hasMore,
+    isRaisedHandsLoading: isLoading,
     currentRoomUser,
     promoteToSpeaker,
-    setRaisedHandsCount
+    fetchNextRaisedHandsPage
   } = useRoomStore(
     useShallow((s) => ({
       isRaisedHandsOpen: s.isRaisedHandsOpen,
       setRaisedHandsOpen: s.setRaisedHandsOpen,
       raisedHandsCount: s.raisedHandsCount,
-      raisedHandsVersion: s.raisedHandsVersion,
+      raisedHandsResetKey: s.raisedHandsResetKey,
+      raisedHands: s.raisedHands,
+      raisedHandsHasMore: s.raisedHandsHasMore,
+      isRaisedHandsLoading: s.isRaisedHandsLoading,
       currentRoomUser: s.currentRoomUser,
       promoteToSpeaker: s.promoteToSpeaker,
-      setRaisedHandsCount: s.setRaisedHandsCount
+      fetchNextRaisedHandsPage: s.fetchNextRaisedHandsPage
     }))
   );
 
@@ -64,15 +69,14 @@ const RaisedHandsDrawer = ({ roomId }: RaisedHandsDrawerProps) => {
 
         <div className="flex-1 min-h-0 px-6">
           <InfiniteScroll<RoomUserType>
-            key={refreshKey}
-            fetcher={(page, pageSize, _params, signal) =>
-              roomApi.raisedHandsList(roomId, { page, pageSize }, signal)
-            }
-            pageSize={20}
+            key={raisedHandsResetKey}
+            data={raisedHands}
+            hasMore={hasMore}
+            loading={isLoading}
+            onLoadMore={() => fetchNextRaisedHandsPage(roomId)}
             useWindowScroll={false}
             style={{ height: "100%" }}
             className="divide-y divide-border/50"
-            onTotalCount={setRaisedHandsCount}
             loader={
               <div className="flex justify-center py-16">
                 <Spinner className="size-8" />

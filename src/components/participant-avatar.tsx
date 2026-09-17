@@ -8,15 +8,11 @@ import { DEFAULT_USER_AVATAR, ROLE_ICONS } from "@/lib/constants";
 interface ParticipantAvatarProps {
   size?: "sm" | "md" | "lg";
   roomUser: RoomUserType;
-  isMuted?: boolean;
-  isRaisingHand?: boolean;
 }
 
 const ParticipantAvatar = ({
   size = "md",
-  roomUser,
-  isMuted = true,
-  isRaisingHand = false
+  roomUser
 }: ParticipantAvatarProps) => {
   const sizeClasses = {
     sm: "w-12 h-12",
@@ -31,6 +27,7 @@ const ParticipantAvatar = ({
 
   const avatar = roomUser.user.profilePicture?.url || DEFAULT_USER_AVATAR;
   const RoleIcon = ROLE_ICONS[roomUser.role.name as RoomUserRole];
+  const isMuted = roomUser.isMuted;
   const isSpeaking = !isMuted;
 
   return (
@@ -107,7 +104,7 @@ const ParticipantAvatar = ({
           )}
         </div>
 
-        {isRaisingHand && (
+        {roomUser.isHandRaised && (
           <motion.div
             className="absolute -top-2 -left-2 p-1.5 rounded-full bg-accent"
             animate={{ y: [0, -4, 0] }}

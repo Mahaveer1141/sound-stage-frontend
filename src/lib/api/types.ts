@@ -198,6 +198,16 @@ export interface RoomUserLeftEventType extends RoomUserCountsType {
   canSpeak: boolean;
 }
 
+export interface UserParticipationType {
+  userId: number;
+  isMuted: boolean;
+  isHandRaised: boolean;
+}
+
+export interface HandRaisedEventType extends UserParticipationType {
+  roomUser?: RoomUserType;
+}
+
 export type EventType =
   | "join_room"
   | "join_stream"
@@ -210,6 +220,7 @@ export type EventType =
   | "webrtc_add_track"
   | "user_role_updated"
   | "set_hand_raised"
+  | "set_muted"
   | "chat_message"
   | "chat_enabled_updated"
   | "error";
