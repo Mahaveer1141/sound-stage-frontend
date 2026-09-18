@@ -54,6 +54,15 @@ export function useWebRTC({
       }
     };
 
+    const pendingCandidates: RTCIceCandidateInit[] = [];
+    const flushPendingCandidates = async () => {
+      for (const candidate of pendingCandidates.splice(0)) {
+        try {
+          await pc.addIceCandidate(candidate);
+        } catch {}
+      }
+    };
+
     const unsubscribes = [
       subscribe<RTCSessionDescriptionInit>("webrtc_offer", async (offer) => {
         try {
@@ -62,6 +71,7 @@ export function useWebRTC({
           }
 
           await pc.setRemoteDescription(offer);
+          await flushPendingCandidates();
 
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
@@ -77,12 +87,17 @@ export function useWebRTC({
 
         try {
           await pc.setRemoteDescription(answer);
+          await flushPendingCandidates();
         } catch (error) {
           console.error("Error handling webrtc_answer:", error);
         }
       }),
 
       subscribe<RTCIceCandidateInit>("webrtc_candidate", async (candidate) => {
+        if (!pc.remoteDescription) {
+          pendingCandidates.push(candidate);
+          return;
+        }
         try {
           await pc.addIceCandidate(candidate);
         } catch {}
@@ -106,7 +121,11 @@ export function useWebRTC({
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
           video: false
         });
 
@@ -175,6 +194,11 @@ function buildIceServers(): RTCIceServer[] {
     turnCredential
   ) {
     iceServers.push(
+      {
+        urls: `turn:${turnUrl}:80`,
+        username: turnUsername,
+        credential: turnCredential
+      },
       {
         urls: `turn:${turnUrl}:80?transport=tcp`,
         username: turnUsername,
