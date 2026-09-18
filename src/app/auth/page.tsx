@@ -218,6 +218,7 @@ const Auth = () => {
   const router = useRouter();
   const [step, setStep] = useState<AuthStep>("email");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [isResendLoading, setIsResendLoading] = useState(false);
 
   const { setEmail, setOtpVerified, startOtpTimer, resetOtpTimer, clearEmail } =
@@ -288,19 +289,19 @@ const Auth = () => {
         setOtpVerified(true);
         router.push("/auth/sign_up");
       } else {
-        clearEmail();
         setTokens(response.data);
+        setIsSuccess(true);
         await refreshUser();
+        clearEmail();
         router.replace("/rooms");
       }
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
-    } finally {
       setIsLoading(false);
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading && !isSuccess) {
     return <Loader />;
   }
 

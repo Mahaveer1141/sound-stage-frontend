@@ -126,8 +126,8 @@ const Room = () => {
 
   const {
     users: speakers,
-    isLoading: isSpeakersLoading,
     count: speakerCount,
+    hasLoaded: speakersLoaded,
     setCount: setSpeakerCount,
     insert: insertSpeaker,
     updateByUserId: updateSpeaker,
@@ -138,12 +138,13 @@ const Room = () => {
     roles: ["admin", "speaker", "moderator", "owner"],
     isOnline: true,
     pageSize: 20,
-    enabled: hasJoined
+    enabled: hasJoined,
+    silent: true
   });
   const {
     users: listeners,
-    isLoading: isListenersLoading,
     count: listenerCount,
+    hasLoaded: listenersLoaded,
     setCount: setListenerCount,
     insert: insertListener,
     updateByUserId: updateListener,
@@ -154,7 +155,8 @@ const Room = () => {
     roles: ["listener"],
     isOnline: true,
     pageSize: 20,
-    enabled: hasJoined
+    enabled: hasJoined,
+    silent: true
   });
   const { toggleMute, remoteStream } = useWebRTC({
     send,
@@ -357,9 +359,8 @@ const Room = () => {
   if (
     isUserLoading ||
     isRoomLoading ||
-    isSpeakersLoading ||
-    isListenersLoading ||
-    isCurrentRoomUserLoading
+    isCurrentRoomUserLoading ||
+    (hasJoined && (!speakersLoaded || !listenersLoaded))
   ) {
     return <Loader />;
   }

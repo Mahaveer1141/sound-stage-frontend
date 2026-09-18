@@ -39,7 +39,6 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   refreshUser: async () => {
-    set({ isLoading: true });
     await get().fetchUser();
   }
 }));

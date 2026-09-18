@@ -10,6 +10,7 @@ interface UseRoomUsersOptions {
   query?: string;
   pageSize?: number;
   enabled?: boolean;
+  silent?: boolean;
 }
 
 interface UseRoomUsersResult {
@@ -18,6 +19,7 @@ interface UseRoomUsersResult {
   setCount: (count: number) => void;
   hasMore: boolean;
   isLoading: boolean;
+  hasLoaded: boolean;
   nextPage: () => void;
   backfill: (timeoutSeconds?: number) => void;
   insert: (roomUser: RoomUserType) => void;
@@ -73,13 +75,15 @@ export function useRoomUsers({
   isOnline,
   query,
   pageSize = 20,
-  enabled = true
+  enabled = true,
+  silent = false
 }: UseRoomUsersOptions): UseRoomUsersResult {
   const [users, setUsers] = useState<RoomUserType[]>([]);
   const [nextCursor, setNextCursor] = useState("");
   const [hasMore, setHasMore] = useState(false);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const backfillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,17 +129,21 @@ export function useRoomUsers({
       if (controller.signal.aborted) return;
       toast.error("Failed to fetch users");
     } finally {
-      if (!controller.signal.aborted) setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+        setHasLoaded(true);
+      }
     }
   };
 
   useEffect(() => {
-    fetchUsers("");
+    setHasLoaded(false);
+    fetchUsers("", silent);
     return () => {
       abortRef.current?.abort();
       if (backfillTimerRef.current) clearTimeout(backfillTimerRef.current);
     };
-  }, [enabled, filtersKey]);
+  }, [enabled, filtersKey, silent, roomId]);
 
   return {
     users,
@@ -143,6 +151,7 @@ export function useRoomUsers({
     setCount,
     hasMore,
     isLoading,
+    hasLoaded,
     nextPage: () => hasMoreRef.current && fetchUsers(nextCursorRef.current),
 
     backfill: (timeoutDuration = 0) => {

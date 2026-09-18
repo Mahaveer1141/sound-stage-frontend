@@ -31,6 +31,7 @@ const Signup = () => {
     }))
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { isUserLoading, refreshUser } = useAuthGuard();
 
   const handleSubmit = async (data: FormData) => {
@@ -38,23 +39,23 @@ const Signup = () => {
     try {
       const response = await authApi.signUp(data);
       setTokens(response.data);
-      clearEmail();
+      setIsSuccess(true);
       await refreshUser();
+      clearEmail();
       router.replace("/rooms");
     } catch (error: unknown) {
       toast.error((error as ApiError).message);
-    } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!isUserLoading && !isOtpVerified) {
+    if (!isSuccess && !isUserLoading && !isOtpVerified) {
       router.replace("/auth");
     }
-  }, [isUserLoading, isOtpVerified, router]);
+  }, [isSuccess, isUserLoading, isOtpVerified, router]);
 
-  if (isUserLoading) {
+  if (isUserLoading && !isSuccess) {
     return <Loader />;
   }
 

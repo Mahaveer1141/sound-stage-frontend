@@ -49,7 +49,7 @@ const initialState: RoomStoreState = {
   room: null,
   currentRoomUser: null,
   hasJoined: false,
-  isRoomLoading: false,
+  isRoomLoading: true,
   isCurrentRoomUserLoading: false,
   isRaisingHand: false,
   raisedHands: [],
@@ -145,6 +145,7 @@ const useRoomStore = create<RoomStore>((set, get) => ({
   joinRoom: async (roomId, privateCode = "") => {
     if (get().hasJoined) return true;
 
+    set({ isCurrentRoomUserLoading: true });
     try {
       await roomApi.join(roomId, privateCode);
       await get().fetchCurrentRoomUser(roomId);
@@ -155,6 +156,8 @@ const useRoomStore = create<RoomStore>((set, get) => ({
         error instanceof ApiError ? error.message : "Failed to join room"
       );
       return false;
+    } finally {
+      set({ isCurrentRoomUserLoading: false });
     }
   },
 
