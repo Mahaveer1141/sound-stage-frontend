@@ -56,6 +56,7 @@ import {
 import { roomApi } from "@/lib/api/endpoints/room";
 import { ApiError } from "@/lib/api";
 import { DEFAULT_ROOM_LOGO } from "@/lib/constants";
+import { capitalize } from "@/lib/utils";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import RemoteAudio from "@/components/remote-audio";
@@ -308,6 +309,9 @@ const Room = () => {
             useRoomStore.getState().currentRoomUser?.user.id
           ) {
             void fetchCurrentRoomUser(id as string, true);
+            toast.info(
+              `You have been assigned as ${capitalize(roomUser.role.name)}`
+            );
           }
 
           if (roomUser.canSpeak) {

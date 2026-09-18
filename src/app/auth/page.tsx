@@ -160,13 +160,14 @@ const OtpForm = ({
                     {...field}
                     maxLength={6}
                     pattern={REGEXP_ONLY_DIGITS}
+                    containerClassName="w-full max-w-80"
                   >
-                    <InputOTPGroup className="gap-2">
-                      {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <InputOTPGroup className="w-full gap-1.5 sm:gap-2">
+                      {Array.from({ length: 6 }, (_, index) => (
                         <InputOTPSlot
                           key={index}
                           index={index}
-                          className="w-12 h-14 text-lg bg-surface/50 border-border/50 rounded-lg"
+                          className="h-12 sm:h-14 min-w-0 flex-1 text-base sm:text-lg bg-surface/50 border-border/50 rounded-lg"
                         />
                       ))}
                     </InputOTPGroup>
